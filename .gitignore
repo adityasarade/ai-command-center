@@ -1,0 +1,5 @@
+AI Box SS/
+.env
+.venv/
+__pycache__/
+.DS_Store
