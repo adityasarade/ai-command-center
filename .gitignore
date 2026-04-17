@@ -3,3 +3,4 @@ AI Box SS/
 .venv/
 __pycache__/
 Docs/
+.DS_Store
