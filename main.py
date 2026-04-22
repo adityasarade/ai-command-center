@@ -1,5 +1,5 @@
 def main():
-    print("Hello from ai-box!")
+    print("Hello from ai-command-center!")
 
 
 if __name__ == "__main__":
