@@ -8,3 +8,8 @@ node_modules/
 *.egg-info/
 dist/
 aicc.config.json
+
+# site build
+site/node_modules/
+site/.next/
+site/.vercel/

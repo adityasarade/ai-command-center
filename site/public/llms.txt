@@ -1,0 +1,42 @@
+# AI Command Center
+
+> A dependency-free LLM gateway and self-hosted usage & cost dashboard. Point any
+> project at it (any language, one command) and it captures tokens, cost, latency,
+> and errors per project. Provider API keys pass through untouched; prompt and
+> response bodies are never stored — metadata only.
+
+Install and run:
+- `npx ai-command-center` starts the gateway + dashboard at http://localhost:4321
+- `npx ai-command-center demo` seeds 14 days of realistic sample data
+- Node.js >= 18.17 is the only prerequisite; the gateway has zero runtime dependencies
+
+Integrate (change a base URL, keep your API key):
+- OpenAI-compatible: `http://localhost:4321/p/<project>/openai/v1`
+- Anthropic: `http://localhost:4321/p/<project>/anthropic`
+- Gemini: `http://localhost:4321/p/<project>/gemini`
+- Also: openrouter, mistral, deepseek, xai, groq, together, ollama, and custom OpenAI-compatible endpoints
+- Or set the SDK's standard env var (OPENAI_BASE_URL / ANTHROPIC_BASE_URL / GOOGLE_GEMINI_BASE_URL) — zero code change
+- Group calls by project via the `/p/<project>/` path segment or an `x-aicc-project` header
+- With auth enabled the path becomes `/k/<gateway-key>/…` (the key authenticates and sets the project)
+- Report usage the proxy can't see with `POST /api/track` (JSON: project, provider, model, tokensIn, tokensOut)
+
+What it is: self-hosted, language-agnostic cost/usage dashboard; transparent single-upstream proxy.
+What it is NOT: a tracing platform, an eval framework, a prompt manager, or a routing/failover gateway.
+
+## Docs
+- Overview: https://ai-command-center.dev/docs
+- Install & run: https://ai-command-center.dev/docs/install
+- Integrate a project: https://ai-command-center.dev/docs/integrate
+- Configuration: https://ai-command-center.dev/docs/config
+- Auth & teams: https://ai-command-center.dev/docs/auth
+- Providers & pricing: https://ai-command-center.dev/docs/providers
+- Self-hosting: https://ai-command-center.dev/docs/self-hosting
+- Security: https://ai-command-center.dev/docs/security
+- HTTP API: https://ai-command-center.dev/docs/api
+- Comparison with other tools: https://ai-command-center.dev/docs/comparison
+- FAQ: https://ai-command-center.dev/docs/faq
+
+## Source
+- GitHub: https://github.com/adityasarade/ai-command-center
+- npm: https://www.npmjs.com/package/ai-command-center
+- License: MIT
