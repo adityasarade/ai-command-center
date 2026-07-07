@@ -24,17 +24,17 @@ What it is: self-hosted, language-agnostic cost/usage dashboard; transparent sin
 What it is NOT: a tracing platform, an eval framework, a prompt manager, or a routing/failover gateway.
 
 ## Docs
-- Overview: https://ai-command-center.vercel.app/docs
-- Install & run: https://ai-command-center.vercel.app/docs/install
-- Integrate a project: https://ai-command-center.vercel.app/docs/integrate
-- Configuration: https://ai-command-center.vercel.app/docs/config
-- Auth & teams: https://ai-command-center.vercel.app/docs/auth
-- Providers & pricing: https://ai-command-center.vercel.app/docs/providers
-- Self-hosting: https://ai-command-center.vercel.app/docs/self-hosting
-- Security: https://ai-command-center.vercel.app/docs/security
-- HTTP API: https://ai-command-center.vercel.app/docs/api
-- Comparison with other tools: https://ai-command-center.vercel.app/docs/comparison
-- FAQ: https://ai-command-center.vercel.app/docs/faq
+- Overview: https://aicommandcenter.vercel.app/docs
+- Install & run: https://aicommandcenter.vercel.app/docs/install
+- Integrate a project: https://aicommandcenter.vercel.app/docs/integrate
+- Configuration: https://aicommandcenter.vercel.app/docs/config
+- Auth & teams: https://aicommandcenter.vercel.app/docs/auth
+- Providers & pricing: https://aicommandcenter.vercel.app/docs/providers
+- Self-hosting: https://aicommandcenter.vercel.app/docs/self-hosting
+- Security: https://aicommandcenter.vercel.app/docs/security
+- HTTP API: https://aicommandcenter.vercel.app/docs/api
+- Comparison with other tools: https://aicommandcenter.vercel.app/docs/comparison
+- FAQ: https://aicommandcenter.vercel.app/docs/faq
 
 ## Source
 - GitHub: https://github.com/adityasarade/ai-command-center

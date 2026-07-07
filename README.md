@@ -36,12 +36,23 @@ client = OpenAI(base_url="http://localhost:4321/p/invoice-bot/openai/v1")
 ```
 
 That's the whole integration. **Full docs & a live interactive demo:
-[ai-command-center.vercel.app](https://ai-command-center.vercel.app)**
+[aicommandcenter.vercel.app](https://aicommandcenter.vercel.app)**
 
 It began as the working implementation of an internal "AI Box" platform concept —
 its SDK + LLM Gateway + cost-visibility slice, built to actually run — and is now
 open-sourced so anyone can get a usage/cost dashboard for their AI projects with
 no hassle.
+
+## How it works
+
+<div align="center">
+<img src="assets/flow.svg" alt="Your apps (any language) change one base URL to call the gateway; it forwards the request untouched to the provider, streams the response back, and logs token/cost/latency metadata only; the dashboard shows spend per project in ₹/$/€." width="900" />
+</div>
+
+Your app calls the LLM exactly as before, but through the gateway. It forwards the
+request untouched (your API key included), streams the response straight back, and
+reads token usage on the side to compute cost. Added latency: well under a
+millisecond.
 
 ## Why
 
@@ -95,7 +106,7 @@ export OPENAI_BASE_URL=\
 </table>
 
 Print snippets for your own project: `npx ai-command-center snippets --project my-app`.
-Full per-language guide (LangChain, Spring AI, curl, …): **[docs/integrate](https://ai-command-center.vercel.app/docs/integrate)**.
+Full per-language guide (LangChain, Spring AI, curl, …): **[docs/integrate](https://aicommandcenter.vercel.app/docs/integrate)**.
 
 **Batch jobs / unsupported providers** — report usage directly and it's priced the same way:
 
@@ -116,7 +127,7 @@ Reach for this when the question is simply *"how many tokens and dollars is each
 project spending, across many providers and languages, without shipping prompt
 content anywhere or running a database?"*
 
-Full, fact-checked comparison: **[docs/comparison](https://ai-command-center.vercel.app/docs/comparison)**.
+Full, fact-checked comparison: **[docs/comparison](https://aicommandcenter.vercel.app/docs/comparison)**.
 
 ## CLI
 
@@ -136,9 +147,9 @@ Flags: `--port` · `--host 0.0.0.0` (share on LAN) · `--data-dir` · `--config`
 
 All optional — the defaults are sensible. See the docs for the full reference:
 
-- **[Configuration](https://ai-command-center.vercel.app/docs/config)** — layered config, presets, currency, custom providers, pricing overrides.
-- **[Auth & teams](https://ai-command-center.vercel.app/docs/auth)** — open until you create the first admin, then login + per-project gateway keys + team-scoped visibility.
-- **[Security](https://ai-command-center.vercel.app/docs/security)** — keys pass through and are never logged; no message bodies stored; cross-origin protection so a random web page can't spend your keys or wipe telemetry.
+- **[Configuration](https://aicommandcenter.vercel.app/docs/config)** — layered config, presets, currency, custom providers, pricing overrides.
+- **[Auth & teams](https://aicommandcenter.vercel.app/docs/auth)** — open until you create the first admin, then login + per-project gateway keys + team-scoped visibility.
+- **[Security](https://aicommandcenter.vercel.app/docs/security)** — keys pass through and are never logged; no message bodies stored; cross-origin protection so a random web page can't spend your keys or wipe telemetry.
 
 ## Measured, not claimed
 

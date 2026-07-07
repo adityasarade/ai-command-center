@@ -77,4 +77,4 @@ Default gateway origin is `http://localhost:4321`. A machine-readable overview
 is at `<gateway>/llms.txt` and on the site at `/llms.txt`.
 
 Do not invent flags or endpoints. The authoritative HTTP surface is in
-[the API docs](https://ai-command-center.vercel.app/docs/api) and `src/server.js`.
+[the API docs](https://aicommandcenter.vercel.app/docs/api) and `src/server.js`.

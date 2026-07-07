@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ai-command-center.vercel.app/sitemap.xml
+Sitemap: https://aicommandcenter.vercel.app/sitemap.xml

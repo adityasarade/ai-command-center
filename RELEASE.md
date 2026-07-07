@@ -16,7 +16,7 @@ vercel --prod           # first run: accept defaults; set project name "ai-comma
 ```
 
 - First deploy asks a few questions — set **project name** to `ai-command-center`
-  so the production URL becomes `https://ai-command-center.vercel.app` (the URL
+  so the production URL becomes `https://aicommandcenter.vercel.app` (the URL
   already wired into the site's metadata, `llms.txt`, sitemap, and the READMEs).
 - If that name/URL is taken, pick another and tell me — I'll update the URLs in
   one pass and you redeploy.
