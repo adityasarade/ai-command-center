@@ -16,7 +16,7 @@ const mono = IBM_Plex_Mono({
   display: 'swap',
 });
 
-const SITE = 'https://ai-command-center.dev';
+const SITE = 'https://ai-command-center.vercel.app';
 
 export const metadata = {
   metadataBase: new URL(SITE),

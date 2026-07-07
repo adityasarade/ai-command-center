@@ -31,7 +31,7 @@ zero code change via `OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL` /
 
 ## Docs & live demo
 
-**https://ai-command-center.dev** — quickstart, per-language integration, config,
+**https://ai-command-center.vercel.app** — quickstart, per-language integration, config,
 auth, HTTP API, providers, self-hosting, security, and an honest comparison with
 Langfuse / Helicone / LangSmith / LiteLLM / Portkey.
 

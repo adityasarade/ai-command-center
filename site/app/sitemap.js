@@ -1,4 +1,4 @@
-const SITE = 'https://ai-command-center.dev';
+const SITE = 'https://ai-command-center.vercel.app';
 const paths = [
   '', '/docs', '/docs/install', '/docs/integrate', '/docs/config', '/docs/auth',
   '/docs/providers', '/docs/self-hosting', '/docs/security', '/docs/api',

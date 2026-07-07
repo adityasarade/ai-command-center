@@ -12,7 +12,7 @@ errors for every AI product land in one place.
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.17-3fb950.svg)](package.json)
 [![runtime deps](https://img.shields.io/badge/runtime%20deps-0-21c17a.svg)](packages/gateway/package.json)
 [![npm](https://img.shields.io/npm/v/ai-command-center?color=cb3837&label=npm)](https://www.npmjs.com/package/ai-command-center)
-[![tests](https://img.shields.io/badge/tests-51%20passing-3fb950.svg)](packages/gateway/test)
+[![tests](https://img.shields.io/badge/tests-52%20passing-3fb950.svg)](packages/gateway/test)
 
 <br/>
 
@@ -36,7 +36,7 @@ client = OpenAI(base_url="http://localhost:4321/p/invoice-bot/openai/v1")
 ```
 
 That's the whole integration. **Full docs & a live interactive demo:
-[ai-command-center.dev](https://ai-command-center.dev)**
+[ai-command-center.vercel.app](https://ai-command-center.vercel.app)**
 
 It began as the working implementation of an internal "AI Box" platform concept —
 its SDK + LLM Gateway + cost-visibility slice, built to actually run — and is now
@@ -95,7 +95,7 @@ export OPENAI_BASE_URL=\
 </table>
 
 Print snippets for your own project: `npx ai-command-center snippets --project my-app`.
-Full per-language guide (LangChain, Spring AI, curl, …): **[docs/integrate](https://ai-command-center.dev/docs/integrate)**.
+Full per-language guide (LangChain, Spring AI, curl, …): **[docs/integrate](https://ai-command-center.vercel.app/docs/integrate)**.
 
 **Batch jobs / unsupported providers** — report usage directly and it's priced the same way:
 
@@ -116,7 +116,7 @@ Reach for this when the question is simply *"how many tokens and dollars is each
 project spending, across many providers and languages, without shipping prompt
 content anywhere or running a database?"*
 
-Full, fact-checked comparison: **[docs/comparison](https://ai-command-center.dev/docs/comparison)**.
+Full, fact-checked comparison: **[docs/comparison](https://ai-command-center.vercel.app/docs/comparison)**.
 
 ## CLI
 
@@ -136,9 +136,9 @@ Flags: `--port` · `--host 0.0.0.0` (share on LAN) · `--data-dir` · `--config`
 
 All optional — the defaults are sensible. See the docs for the full reference:
 
-- **[Configuration](https://ai-command-center.dev/docs/config)** — layered config, presets, currency, custom providers, pricing overrides.
-- **[Auth & teams](https://ai-command-center.dev/docs/auth)** — open until you create the first admin, then login + per-project gateway keys + team-scoped visibility.
-- **[Security](https://ai-command-center.dev/docs/security)** — keys pass through and are never logged; no message bodies stored; cross-origin protection so a random web page can't spend your keys or wipe telemetry.
+- **[Configuration](https://ai-command-center.vercel.app/docs/config)** — layered config, presets, currency, custom providers, pricing overrides.
+- **[Auth & teams](https://ai-command-center.vercel.app/docs/auth)** — open until you create the first admin, then login + per-project gateway keys + team-scoped visibility.
+- **[Security](https://ai-command-center.vercel.app/docs/security)** — keys pass through and are never logged; no message bodies stored; cross-origin protection so a random web page can't spend your keys or wipe telemetry.
 
 ## Measured, not claimed
 
@@ -179,7 +179,7 @@ docs/                comparison, demo script
 ## Development
 
 ```bash
-npm test          # 51 tests — mock upstream providers, no API keys needed
+npm test          # 52 tests — mock upstream providers, no API keys needed
 npm run evals     # overhead + cost-accuracy report
 npm start         # run the gateway from source
 cd site && npm run dev   # the website
