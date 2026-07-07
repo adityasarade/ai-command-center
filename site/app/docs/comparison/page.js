@@ -14,7 +14,7 @@ const ROWS = [
     integration: 'base_url swap on any provider SDK; no code rewrite',
     selfhost: <Y />,
     lang: <Y />,
-    focus: 'Self-hosted multi-project cost / usage / latency dashboard',
+    focus: 'Self-hosted cost, usage, traces, prompts, budgets & anomaly dashboard',
     gateway: <Y />,
     license: 'MIT',
   },
@@ -134,15 +134,17 @@ export default function Page() {
 
       <h2>Where it fits - and where it doesn&apos;t</h2>
       <p>
-        AI Command Center occupies a deliberately narrow slot: a self-hosted, language-agnostic,
-        zero-dependency cost and usage dashboard you can stand up with a single command. You point
-        any provider SDK&apos;s base URL at the gateway, and it captures tokens, cost, latency, and
-        errors per project into append-only local JSONL. There is no external database, no message
-        queue, and no analytics cluster to operate - which is the main thing that separates it from
-        the platforms above. Most of them are genuinely powerful, but their self-hosted footprint is
-        a multi-service stack (Postgres + ClickHouse + Redis + object storage, sometimes Kafka), and
-        several are self-hostable only on their Enterprise tier or keep the analytics control plane
-        in SaaS.
+        AI Command Center occupies a deliberately lean slot: a self-hosted, language-agnostic,
+        zero-dependency command center you stand up with a single command. You point any provider
+        SDK&apos;s base URL at the gateway, and it captures tokens, cost, latency and errors per
+        project into append-only local JSONL. On top of that it groups calls into{' '}
+        <strong>traces/sessions</strong>, tracks <strong>prompt versions</strong>, enforces{' '}
+        <strong>budgets</strong>, raises <strong>threshold and anomaly alerts</strong>, and compares{' '}
+        <strong>models</strong> head to head. There is no external database, no message queue, and
+        no analytics cluster to operate - which is the main thing that separates it from the
+        platforms above, whose self-hosted footprint is typically a multi-service stack (Postgres +
+        ClickHouse + Redis + object storage, sometimes Kafka), and several of which are
+        self-hostable only on their Enterprise tier or keep the control plane in SaaS.
       </p>
       <p>
         Two design choices define the niche. First, it is an <strong>inline gateway</strong>, so
@@ -155,17 +157,20 @@ export default function Page() {
         or compliance posture, that is a real difference.
       </p>
       <p>
-        Be clear about what it is <strong>not</strong>. It is not a tracing or evaluation platform:
-        no span trees, no agent-step traces, no LLM-as-judge scoring, no datasets, no prompt
-        playground. It is not a router: no load balancing, retries, failover, or semantic caching.
-        It is not SaaS, and it is not a billing engine. On every one of those axes, another tool on
-        this list does more.
+        Be clear about where it stays lightweight <strong>by design</strong>. Its traces are
+        session-level groupings, not full distributed span trees. Its prompt tracking compares
+        versions by cost/latency/error rate, but there is no prompt playground. Its anomaly
+        detection is explainable rules, not ML. It has{' '}
+        <strong>no LLM-as-judge quality evals</strong>, no datasets, and it is{' '}
+        <strong>not a router</strong> - no load balancing, retries, failover, or semantic caching -
+        and not a SaaS or billing engine. On each of those axes, another tool on this list goes
+        further; several are on the <Link href="/#roadmap">roadmap</Link>.
       </p>
 
       <h2>When to choose something else</h2>
       <ul>
         <li>
-          Need full traces, evals, datasets, or prompt versioning →{' '}
+          Need full distributed span trees, LLM-as-judge evals, datasets, or a prompt playground →{' '}
           <strong>Langfuse, Helicone, LangSmith, Lunary, OpenLLMetry/Traceloop</strong>.
         </li>
         <li>
@@ -177,17 +182,18 @@ export default function Page() {
         </li>
         <li>
           Want a managed, hosted service with no infrastructure to run → most of the above offer
-          SaaS; this project does not.
+          SaaS; this project is self-hosted only.
         </li>
       </ul>
 
       <div className="callout">
-        <strong>Who it&apos;s for:</strong> teams that want dead-simple, self-hosted,
-        language-agnostic, body-free cost and usage visibility across many AI projects with zero
-        infrastructure.
+        <strong>Who it&apos;s for:</strong> teams that want self-hosted, language-agnostic,
+        body-free visibility - cost, usage, traces, prompt versions, budgets and anomaly alerts -
+        across many AI projects, with zero infrastructure to operate.
         <br />
-        <strong>Not for:</strong> teams needing full tracing, evaluations, prompt management,
-        provider routing/failover, or a managed SaaS at scale - pick one of the platforms above.
+        <strong>Not for:</strong> teams needing deep distributed tracing, quality evaluations, a
+        prompt playground, provider routing/failover, or a managed SaaS at scale - pick one of the
+        platforms above.
       </div>
 
       <p style={{ color: 'var(--muted)', fontSize: 14 }}>

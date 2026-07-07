@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { CodeBlock } from './components/CodeBlock';
 import { CodeTabs } from './components/Tabs';
 import { DemoDashboard } from './components/DemoDashboard';
 
@@ -49,197 +48,222 @@ export ANTHROPIC_BASE_URL="http://localhost:4321/p/my-app/anthropic"`,
   },
 ];
 
-const FEATURES = [
+const ROADMAP = [
   [
-    '01',
-    'One line to onboard',
-    'Change a base URL - or one env var - and any project starts reporting. No new library to install, no per-language SDK, no instrumentation.',
+    'shipped',
+    'Cost & usage dashboard',
+    'Spend, tokens, latency, errors per project - in INR, USD or EUR.',
+  ],
+  ['shipped', 'Traces / sessions', 'Group an app request or agent run into a call timeline.'],
+  [
+    'shipped',
+    'Prompt versioning',
+    'Track prompt templates by version and compare cost and quality drift.',
   ],
   [
-    '02',
-    'Any language',
-    'It’s an HTTP gateway. Python, JS, Java, Go, Rust, shell - if it can call an LLM, it works, identically.',
+    'shipped',
+    'Budgets & alerts',
+    'Per-project monthly budgets, threshold alerts, optional webhook.',
   ],
+  ['shipped', 'Anomaly detection', 'Rule-based cost-spike and error-burst flags, per project.'],
   [
-    '03',
-    'Every provider',
-    'OpenAI, Anthropic, Gemini, OpenRouter, Mistral, DeepSeek, xAI, Groq, Together, Ollama, and any OpenAI-compatible endpoint.',
+    'shipped',
+    'Model comparison',
+    'Effective cost/1M tokens, p50/p95 latency and error rate, side by side.',
   ],
-  [
-    '04',
-    'Cost you can trust',
-    'Exact per-request USD from real token counts (incl. cached tokens), shown in ₹ / $ / € with live rates. Verified by the eval suite.',
-  ],
-  [
-    '05',
-    'Your keys, your data',
-    'Provider keys pass straight through. Prompts and responses are never stored - metadata only. Telemetry stays on your machine.',
-  ],
-  [
-    '06',
-    'Zero dependencies',
-    'The whole gateway is plain Node with no npm runtime deps. One command, one file of telemetry (JSONL). Trivial to audit and run.',
-  ],
+  ['next', 'Quality evals', 'LLM-as-judge scoring and datasets, run against prompt versions.'],
+  ['next', 'Provider routing', 'Fallback and load-balancing across providers (opt-in).'],
+  ['next', 'SSO & RBAC depth', 'OIDC/SAML sign-in beyond the built-in username/password.'],
+  ['next', 'Managed option', 'A hosted deployment for teams that would rather not self-host.'],
 ];
 
 export default function Home() {
   return (
     <>
-      <header className="hero wrap">
-        <span className="eyebrow">
-          <span className="dot" /> open source · self-hosted · MIT
-        </span>
-        <h1>
-          One gateway, every AI project, <span className="grad">one dashboard.</span>
-        </h1>
-        <p className="lede">
-          AI Command Center is a dependency-free LLM gateway and self-hosted usage &amp; cost
-          dashboard. Point any project at it - any language, one command - and watch tokens, cost,
-          latency and errors for every AI product land in one place.
-        </p>
-        <div className="hero-actions">
-          <Link href="/docs" className="btn btn-primary">
-            Get started →
-          </Link>
-          <a href={REPO} target="_blank" rel="noreferrer" className="btn btn-ghost">
-            Star on GitHub
-          </a>
-          <span className="hero-note">npx ai-command-center</span>
-        </div>
-      </header>
+      <div className="hero-wrap">
+        <header className="hero wrap">
+          <span className="eyebrow">
+            <span className="dot" /> open source · self-hosted · zero dependencies · MIT
+          </span>
+          <h1>
+            The command center for <span className="grad">every AI project you run.</span>
+          </h1>
+          <p className="lede">
+            A dependency-free LLM gateway and self-hosted dashboard. Point any project at it - any
+            language, one command - and get cost, usage, latency, traces, prompt versions, budgets
+            and anomaly alerts across your whole AI portfolio. No SDK to adopt, no database to run.
+          </p>
+          <div className="hero-actions">
+            <Link href="/docs" className="btn btn-primary">
+              Get started
+            </Link>
+            <a href={REPO} target="_blank" rel="noreferrer" className="btn btn-ghost">
+              Star on GitHub
+            </a>
+            <span className="term">
+              <span className="prompt">$</span> npx ai-command-center <span className="cursor" />
+            </span>
+          </div>
+        </header>
 
-      <section className="wrap" style={{ paddingBottom: 20 }}>
-        <DemoDashboard />
-        <p className="hero-note" style={{ marginTop: 10, textAlign: 'center' }}>
-          ↑ a live, clickable sample - toggle currency and range. Run{' '}
-          <code>npx ai-command-center demo</code> for the real thing.
-        </p>
-      </section>
+        <section className="wrap" style={{ paddingBottom: 56 }}>
+          <DemoDashboard />
+          <p className="hero-note" style={{ marginTop: 12, textAlign: 'center' }}>
+            A live, clickable sample - toggle currency and range. Run{' '}
+            <code>npx ai-command-center demo</code> for the real dashboard with five views.
+          </p>
+        </section>
+      </div>
 
-      <section className="band">
+      <section className="sec">
         <div className="wrap">
-          <div className="section-head">
-            <span className="mono-label">60-second start</span>
-            <h2>Run it, point a project at it, watch it fill up.</h2>
+          <div className="sec-head">
+            <span className="mono-label">Integration</span>
+            <h2>Change one base URL. Keep your keys. Ship.</h2>
+            <p>
+              Every provider SDK already supports a custom base URL, so onboarding a project is one
+              line - or zero, via an environment variable. Nothing else about your code changes, and
+              your API keys are forwarded to the provider untouched.
+            </p>
           </div>
           <div className="grid-2">
-            <div>
-              <p style={{ marginBottom: 10, color: 'var(--ink-2)' }}>
-                1 - Start the gateway + dashboard:
+            <CodeTabs items={SNIPPETS} />
+            <div className="card">
+              <span className="ic">HOW IT WORKS</span>
+              <p style={{ marginTop: 10 }}>
+                Your app calls the LLM as before, but through the gateway. It forwards the request
+                untouched, streams the response straight back, and reads token usage on the side to
+                compute cost. Added latency is well under a millisecond; nothing sits between you
+                and the provider except a thin, auditable proxy.
               </p>
-              <CodeBlock
-                lang="bash"
-                code={`npx ai-command-center\n# dashboard opens at http://localhost:4321`}
-              />
-              <p style={{ margin: '18px 0 10px', color: 'var(--ink-2)' }}>
-                2 - Point any project at it:
-              </p>
-              <CodeTabs items={SNIPPETS} />
-            </div>
-            <div>
-              <p style={{ marginBottom: 10, color: 'var(--ink-2)' }}>
-                Nothing to look at yet? Seed a realistic 14-day sample:
-              </p>
-              <CodeBlock
-                lang="bash"
-                code={`npx ai-command-center demo\n# 4 sample projects, real model mix, one cost spike to spot`}
-              />
-              <div className="card" style={{ marginTop: 18 }}>
-                <span className="ic">HOW IT WORKS</span>
-                <p style={{ marginTop: 8 }}>
-                  Your app calls the LLM exactly as before, but through the gateway. It forwards the
-                  request untouched (your API key included), streams the response straight back, and
-                  reads the token usage on the side to compute cost. Latency added: well under a
-                  millisecond.
-                </p>
+              <div className="chips">
+                <span>OpenAI</span>
+                <span>Anthropic</span>
+                <span>Gemini</span>
+                <span>Mistral</span>
+                <span>DeepSeek</span>
+                <span>xAI</span>
+                <span>Groq</span>
+                <span>Together</span>
+                <span>OpenRouter</span>
+                <span>Ollama</span>
+                <span>+ any OpenAI-compatible</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="band">
+      <section className="sec">
         <div className="wrap">
-          <div className="section-head">
-            <span className="mono-label">Why it exists</span>
-            <h2>Cost visibility across your whole AI portfolio, without a platform to run.</h2>
+          <div className="sec-head">
+            <span className="mono-label">What you get</span>
+            <h2>More than a cost meter. A control room.</h2>
             <p>
-              Most teams either fly blind on spend or stand up a multi-service observability stack.
-              This is the middle path: the numbers you actually need, from one command, on your own
-              machine.
+              Every capability works from the same one-command install, with metadata-only storage
+              and no external services.
             </p>
           </div>
-          <div className="grid-3">
-            {FEATURES.map(([n, title, body]) => (
-              <div className="card" key={n}>
-                <span className="ic">{n}</span>
-                <h3>{title}</h3>
-                <p>{body}</p>
+          <div className="bento">
+            <div className="cell wide">
+              <span className="k">Cost &amp; usage</span>
+              <h3>Spend across your whole portfolio, in your currency</h3>
+              <p>
+                Per-request cost from real token counts (including cached tokens), grouped by
+                project and model, with latency percentiles and error rates. Shown in ₹ / $ / € with
+                live exchange rates; stored in USD.
+              </p>
+            </div>
+            <div className="cell third">
+              <span className="k">Traces</span>
+              <h3>Session timelines</h3>
+              <p>Group the calls in one request or agent run and see the timeline.</p>
+            </div>
+            <div className="cell third">
+              <span className="k">Prompts</span>
+              <h3>Version tracking</h3>
+              <p>Compare cost, latency and error rate across prompt versions.</p>
+            </div>
+            <div className="cell third">
+              <span className="k">Budgets</span>
+              <h3>Limits &amp; alerts</h3>
+              <p>Monthly budgets per project, threshold alerts, optional webhook.</p>
+            </div>
+            <div className="cell third">
+              <span className="k">Anomalies</span>
+              <h3>Spike detection</h3>
+              <p>Rule-based cost-spike and error-burst flags, per project.</p>
+            </div>
+            <div className="cell half">
+              <span className="k">Models</span>
+              <h3>Compare models head to head</h3>
+              <p>
+                Effective cost per million tokens, p50/p95 latency and error rate side by side - so
+                a model swap is a decision, not a guess.
+              </p>
+            </div>
+            <div className="cell half">
+              <span className="k">Privacy</span>
+              <h3>Your keys and data stay yours</h3>
+              <p>
+                Provider keys pass straight through and are never logged. Prompt and response bodies
+                are never stored - metadata only. Everything runs on your machine.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="sec">
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="mono-label">Honest positioning</span>
+            <h2>Lightweight on purpose.</h2>
+            <p>
+              Full platforms like Langfuse, Helicone and LangSmith go deeper on tracing and
+              evaluation; LiteLLM and Portkey are richer gateways. They are also a database, a queue
+              and an analytics cluster to operate. This is one command and a file of JSONL - the
+              answer to <em>&ldquo;what is each project spending, and is anything off?&rdquo;</em>{' '}
+              without standing up infrastructure.
+            </p>
+          </div>
+          <Link href="/docs/comparison" className="btn btn-ghost">
+            See the full, fact-checked comparison
+          </Link>
+        </div>
+      </section>
+
+      <section className="sec" id="roadmap">
+        <div className="wrap">
+          <div className="sec-head">
+            <span className="mono-label">Roadmap</span>
+            <h2>Shipped, and what&apos;s next.</h2>
+            <p>Clear about what exists today and what is deliberately not built yet.</p>
+          </div>
+          <div className="roadmap">
+            {ROADMAP.map(([tag, title, desc]) => (
+              <div className="road-item" key={title}>
+                <span className={`tag ${tag}`}>{tag}</span>
+                <span className="d">
+                  <b>{title}.</b> {desc}
+                </span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="band">
-        <div className="wrap">
-          <div className="section-head">
-            <span className="mono-label">Measured, not claimed</span>
-            <h2>Numbers from the eval suite.</h2>
-            <p>
-              Reproduce them yourself with <code>npm run evals</code> - they run against a mock
-              upstream, no API keys, no network.
-            </p>
-          </div>
-          <div className="stats-row">
-            <div className="card stat">
-              <b>&lt;1 ms</b>
-              <span>added latency (p50) routing through the gateway</span>
-            </div>
-            <div className="card stat">
-              <b>0</b>
-              <span>cost mismatches across 20 provider/model/token cases</span>
-            </div>
-            <div className="card stat">
-              <b>100%</b>
-              <span>of provider response shapes parsed for usage</span>
-            </div>
-            <div className="card stat">
-              <b>0</b>
-              <span>runtime dependencies in the gateway</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="band">
-        <div className="wrap">
-          <div className="section-head">
-            <span className="mono-label">Honest positioning</span>
-            <h2>Not a tracing platform. Not a router. A cost dashboard that just runs.</h2>
-            <p>
-              Tools like Langfuse, Helicone, and LangSmith do far more - full traces, evals, prompt
-              management. LiteLLM and Portkey are richer gateways. If you need those, use them.
-              Reach for this when the question is simply{' '}
-              <em>“how many tokens and dollars is each project spending?”</em> and you want the
-              answer in one command.
-            </p>
-          </div>
-          <Link href="/docs/comparison" className="btn btn-ghost">
-            See the full comparison →
-          </Link>
-        </div>
-      </section>
-
-      <section className="band">
+      <section className="sec">
         <div className="wrap" style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'clamp(24px,4vw,38px)' }}>Give every AI project a dashboard.</h2>
-          <p style={{ color: 'var(--ink-2)', margin: '12px auto 26px', maxWidth: '52ch' }}>
-            No signup, no database, no vendor. Just a command and a base URL.
+          <h2 style={{ fontSize: 'clamp(26px,4vw,40px)' }}>
+            Give every AI project a command center.
+          </h2>
+          <p style={{ color: 'var(--ink-2)', margin: '12px auto 26px', maxWidth: '54ch' }}>
+            No signup, no database, no vendor. One command and a base URL.
           </p>
           <div className="hero-actions" style={{ justifyContent: 'center' }}>
             <Link href="/docs" className="btn btn-primary">
-              Read the docs →
+              Read the docs
             </Link>
             <a href={REPO} target="_blank" rel="noreferrer" className="btn btn-ghost">
               GitHub
