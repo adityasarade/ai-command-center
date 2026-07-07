@@ -113,6 +113,14 @@ init({ project: "support-bot" });`}
         <code>x-aicc-project: invoice-bot</code>.
       </p>
 
+      <h2>Traces &amp; prompt versions</h2>
+      <p>
+        Two more optional headers unlock the Traces and Prompts views: <code>x-aicc-trace</code> (a
+        shared id across the calls in one request or agent run) and <code>x-aicc-prompt</code> /{' '}
+        <code>x-aicc-prompt-version</code>. Full details in{' '}
+        <Link href="/docs/features">Traces, prompts &amp; budgets</Link>.
+      </p>
+
       <div className="callout">
         With <Link href="/docs/auth">auth enabled</Link>, the <code>/p/&lt;project&gt;</code>{' '}
         segment becomes

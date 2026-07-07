@@ -25,6 +25,8 @@ packages/gateway/        the npm package `ai-command-center`
   src/store.js           append-only JSONL persistence
   src/fx.js              currency exchange rates
   src/auth.js            zero-dep scrypt + HMAC-cookie auth, teams, keys
+  src/budgets.js         per-project budgets + alert thresholds (budgets.json)
+  src/anomaly.js         rule-based anomaly detection + alert computation
   src/cors.js            origin policy
   src/config.js          layered config + presets
   public/                the dashboard (index.html, app.js, style.css)
@@ -70,8 +72,10 @@ move the user's API key.
 - `<project>` groups calls on the dashboard; you may also send header `x-aicc-project: <name>`.
 - If the gateway has auth enabled, use `/k/<gateway-key>/…` instead of `/p/<project>/…`
   (the key both authenticates and sets the project), or send header `x-aicc-key`.
+- Optional: `x-aicc-trace: <id>` groups the calls of one request/agent run into a session;
+  `x-aicc-prompt: <name>` + `x-aicc-prompt-version: <v>` populate the Prompts view.
 - For usage the proxy can't see (batch jobs, unsupported providers):
-  `POST http://<gateway>/api/track` with JSON `{project, provider, model, tokensIn, tokensOut}`.
+  `POST http://<gateway>/api/track` with JSON `{project, provider, model, tokensIn, tokensOut, trace?, prompt?, promptVersion?}`.
 
 Default gateway origin is `http://localhost:4321`. A machine-readable overview
 is at `<gateway>/llms.txt` and on the site at `/llms.txt`.

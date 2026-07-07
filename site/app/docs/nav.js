@@ -5,6 +5,7 @@ export const DOCS_NAV = [
       ['/docs', 'Overview'],
       ['/docs/install', 'Install & run'],
       ['/docs/integrate', 'Integrate a project'],
+      ['/docs/features', 'Traces, prompts & budgets'],
     ],
   },
   {

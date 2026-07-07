@@ -18,15 +18,19 @@ Integrate (change a base URL, keep your API key):
 - Or set the SDK's standard env var (OPENAI_BASE_URL / ANTHROPIC_BASE_URL / GOOGLE_GEMINI_BASE_URL) - zero code change
 - Group calls by project via the `/p/<project>/` path segment or an `x-aicc-project` header
 - With auth enabled the path becomes `/k/<gateway-key>/…` (the key authenticates and sets the project)
-- Report usage the proxy can't see with `POST /api/track` (JSON: project, provider, model, tokensIn, tokensOut)
+- Group a request/agent run into a session with an `x-aicc-trace` header; track prompts with `x-aicc-prompt` / `x-aicc-prompt-version`
+- Report usage the proxy can't see with `POST /api/track` (JSON: project, provider, model, tokensIn, tokensOut, trace?, prompt?, promptVersion?)
 
-What it is: self-hosted, language-agnostic cost/usage dashboard; transparent single-upstream proxy.
-What it is NOT: a tracing platform, an eval framework, a prompt manager, or a routing/failover gateway.
+Dashboard views: Overview (cost/usage/latency), Traces (sessions), Prompts (version metrics), Models (comparison), Alerts (budgets + anomalies).
+
+What it is: self-hosted, language-agnostic dashboard for cost, usage, traces, prompt versions, budgets and anomaly alerts; a transparent single-upstream proxy.
+What it is NOT (by design): a distributed span-tree tracer, an LLM-as-judge eval framework, a prompt playground, or a routing/failover gateway.
 
 ## Docs
 - Overview: https://aicommandcenter.vercel.app/docs
 - Install & run: https://aicommandcenter.vercel.app/docs/install
 - Integrate a project: https://aicommandcenter.vercel.app/docs/integrate
+- Traces, prompts & budgets: https://aicommandcenter.vercel.app/docs/features
 - Configuration: https://aicommandcenter.vercel.app/docs/config
 - Auth & teams: https://aicommandcenter.vercel.app/docs/auth
 - Providers & pricing: https://aicommandcenter.vercel.app/docs/providers

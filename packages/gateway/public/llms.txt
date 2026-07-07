@@ -13,8 +13,11 @@ Integrate (replace the origin with this gateway's origin):
 - Zero code change: set OPENAI_BASE_URL / ANTHROPIC_BASE_URL / GOOGLE_GEMINI_BASE_URL
 - Group by project via the `/p/<project>/` path or an `x-aicc-project` header
 - With auth enabled use `/k/<gateway-key>/…` (the key authenticates and sets the project) or header `x-aicc-key`
-- Report usage the proxy can't see: `POST <origin>/api/track` with JSON {project, provider, model, tokensIn, tokensOut}
+- Group calls into a session with an `x-aicc-trace` header; track prompts with `x-aicc-prompt` and `x-aicc-prompt-version`
+- Report usage the proxy can't see: `POST <origin>/api/track` with JSON {project, provider, model, tokensIn, tokensOut, trace?, prompt?, promptVersion?}
 
-HTTP API (JSON): GET /health, /api/meta, /api/stats?range=7d, /api/requests, /api/projects, /api/fx, /api/events (SSE); POST /api/track.
+Dashboard views: Overview (cost/usage), Traces (sessions), Prompts (versions), Models (comparison), Alerts (budgets + anomalies).
+
+HTTP API (JSON): GET /health, /api/meta, /api/stats?range=7d, /api/requests, /api/projects, /api/fx, /api/events (SSE), /api/traces, /api/trace?id=, /api/prompts, /api/models, /api/anomalies, /api/alerts; POST /api/track; admin: POST /api/admin/budget.
 
 Docs & source: https://github.com/adityasarade/ai-command-center - MIT.

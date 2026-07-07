@@ -6,6 +6,27 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Traces / sessions**: group the LLM calls of one request or agent run via an
+  `x-aicc-trace` header; a Traces dashboard view lists sessions and their timelines.
+- **Prompt registry**: track prompt templates and versions via `x-aicc-prompt` /
+  `x-aicc-prompt-version`; a Prompts view compares cost, latency and error rate per version.
+- **Budgets & alerts**: per-project monthly budgets with threshold alerts, plus
+  per-project error-rate / p95-latency alerts and an optional `alertWebhook`.
+- **Anomaly detection**: rule-based cost-spike and error-burst flags per project.
+- **Model comparison** view: effective cost per 1M tokens, p50/p95 latency, error rate.
+- **Dashboard**: multi-view UI (Overview / Traces / Prompts / Models / Alerts) with
+  request-feed pagination.
+- New API endpoints: `/api/traces`, `/api/trace`, `/api/prompts`, `/api/models`,
+  `/api/anomalies`, `/api/alerts`, and admin `/api/admin/budget`.
+- ESLint + Prettier with a CI lint job; a marketing + docs website under `site/`.
+
+### Changed
+
+- Auth: password hashing is now async (non-blocking); gateway keys compared in
+  constant time; session cookie gets `Secure` behind TLS.
+
 ## [0.1.0] - 2026-07
 
 First public release.

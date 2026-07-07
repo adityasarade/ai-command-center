@@ -100,9 +100,53 @@ export default function Page() {
           </tr>
           <tr>
             <td>
+              <code>GET /api/traces?range=7d</code>
+            </td>
+            <td>sessions grouped by trace id (newest first)</td>
+          </tr>
+          <tr>
+            <td>
+              <code>GET /api/trace?id=…</code>
+            </td>
+            <td>the ordered call timeline for one trace</td>
+          </tr>
+          <tr>
+            <td>
+              <code>GET /api/prompts?range=7d</code>
+            </td>
+            <td>per prompt+version cost, latency and error rate</td>
+          </tr>
+          <tr>
+            <td>
+              <code>GET /api/models?range=7d</code>
+            </td>
+            <td>model comparison (effective $/1M tok, p50/p95, error rate)</td>
+          </tr>
+          <tr>
+            <td>
+              <code>GET /api/anomalies?range=30d</code>
+            </td>
+            <td>rule-based cost-spike / error-burst flags</td>
+          </tr>
+          <tr>
+            <td>
+              <code>GET /api/alerts</code>
+            </td>
+            <td>active alerts + budgets (spend vs limit) + thresholds</td>
+          </tr>
+          <tr>
+            <td>
               <code>POST /api/track</code>
             </td>
             <td>ingest external usage (see below)</td>
+          </tr>
+          <tr>
+            <td>
+              <code>POST /api/admin/budget</code>
+            </td>
+            <td>
+              admin: set a project budget <code>{'{ project, monthlyUsd, alertAtPct }'}</code>
+            </td>
           </tr>
           <tr>
             <td>
@@ -112,6 +156,12 @@ export default function Page() {
           </tr>
         </tbody>
       </table>
+      <p>
+        Requests may carry <code>x-aicc-trace</code>, <code>x-aicc-prompt</code> and{' '}
+        <code>x-aicc-prompt-version</code> headers (or the same fields in a <code>/api/track</code>{' '}
+        body) to power the Traces and Prompts views. See{' '}
+        <a href="/docs/features">Traces, prompts &amp; budgets</a>.
+      </p>
       <p>
         <code>range</code> accepts <code>1h · 24h · 7d · 30d · 90d · all</code>, or explicit{' '}
         <code>from</code>/<code>to</code> epoch-ms.

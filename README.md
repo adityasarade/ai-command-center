@@ -65,8 +65,13 @@ machine, with **zero runtime dependencies**.
 - **Any language** - it's an HTTP gateway. Python, JS, Java, Go, Rust, shell - identical.
 - **Every provider** - OpenAI, Anthropic, Gemini, OpenRouter, Mistral, DeepSeek, xAI, Groq, Together, Ollama, and any OpenAI-compatible endpoint.
 - **Cost you can trust** - exact per-request USD from real token counts (incl. cached tokens), shown in ₹ / $ / € with live rates.
+- **More than a meter** - five dashboard views: cost/usage, **traces/sessions**, **prompt versions**, **model comparison**, and **budgets + anomaly alerts**.
 - **Your keys, your data** - provider keys pass straight through; **prompt and response bodies are never stored** (metadata only); telemetry stays on your machine.
 - **Team-ready** - optional login, teams, and per-project gateway keys, so members see only their team's projects.
+
+Traces and prompt metrics come from two optional headers (`x-aicc-trace`,
+`x-aicc-prompt`); budgets and anomaly alerts are computed for you. See
+[docs/features](https://aicommandcenter.vercel.app/docs/features).
 
 ## Integrate (any language)
 
@@ -119,15 +124,18 @@ curl -X POST http://localhost:4321/api/track -H "Content-Type: application/json"
 
 ## How it compares
 
-AI Command Center occupies a deliberately narrow slot: a self-hosted,
-language-agnostic **cost/usage dashboard** that runs from one command with no
-database. It is **not** a tracing platform, an eval framework, a prompt manager,
-or a routing/failover gateway - tools like Langfuse, Helicone, LangSmith,
-LiteLLM, and Portkey do far more on those axes. If you need them, use them.
+AI Command Center is a self-hosted, language-agnostic command center that runs
+from one command with no database: cost/usage, session traces, prompt-version
+metrics, model comparison, budgets and anomaly alerts. It stays lightweight **by
+design** - it is not a distributed span-tree tracer, an LLM-as-judge eval
+framework, a prompt playground, or a routing/failover gateway. Platforms like
+Langfuse, Helicone, LangSmith, LiteLLM, and Portkey go further on those axes (and
+are also a database, a queue, and an analytics cluster to run). If you need them,
+use them.
 
-Reach for this when the question is simply _"how many tokens and dollars is each
-project spending, across many providers and languages, without shipping prompt
-content anywhere or running a database?"_
+Reach for this when the question is _"what is each project spending, across many
+providers and languages, and is anything off?"_ - answered without shipping
+prompt content anywhere or standing up infrastructure.
 
 Full, fact-checked comparison: **[docs/comparison](https://aicommandcenter.vercel.app/docs/comparison)**.
 

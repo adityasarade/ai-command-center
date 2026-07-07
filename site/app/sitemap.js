@@ -4,6 +4,7 @@ const paths = [
   '/docs',
   '/docs/install',
   '/docs/integrate',
+  '/docs/features',
   '/docs/config',
   '/docs/auth',
   '/docs/providers',
