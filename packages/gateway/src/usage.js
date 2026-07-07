@@ -3,7 +3,7 @@
  *
  * Normalized usage shape (token counts):
  *   { inputUncached, cacheRead, cacheWrite, output }
- * Provider billing semantics differ — normalization happens here so the
+ * Provider billing semantics differ - normalization happens here so the
  * pricing engine can stay provider-agnostic:
  *   - OpenAI:    prompt_tokens INCLUDES cached_tokens → inputUncached = prompt - cached
  *   - Anthropic: input_tokens EXCLUDES cache reads/writes (separate fields)
@@ -61,7 +61,7 @@ export function extractFromJson(kind, obj) {
     }
     return { usage: fromGeminiUsage(obj.usageMetadata), model: obj.modelVersion ?? null };
   }
-  // openai kind — chat.completions / embeddings ({usage}), or Responses API ({response:{usage}}
+  // openai kind - chat.completions / embeddings ({usage}), or Responses API ({response:{usage}}
   // never appears non-streaming, but usage/model live at the top level there too).
   const usage = obj.usage ? fromOpenAIUsage(obj.usage) : null;
   return { usage, model: obj.model ?? null };
@@ -112,7 +112,7 @@ export function makeStreamAccumulator(kind) {
     };
   }
 
-  // openai kind — chat chunks carry usage:null until the final chunk
+  // openai kind - chat chunks carry usage:null until the final chunk
   // (with stream_options.include_usage). Groq nests it in x_groq.usage.
   // The Responses API emits events with {response:{usage, model}}.
   let rawUsage = null;

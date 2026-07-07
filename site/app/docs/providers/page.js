@@ -13,8 +13,8 @@ export default function Page() {
       <table>
         <thead><tr><th>Route prefix</th><th>Upstream</th><th>Parsing</th></tr></thead>
         <tbody>
-          <tr><td><code>/openai</code></td><td>api.openai.com</td><td>chat, responses, embeddings — stream + non-stream, cached tokens</td></tr>
-          <tr><td><code>/anthropic</code></td><td>api.anthropic.com</td><td>messages — stream + non-stream, cache read/write</td></tr>
+          <tr><td><code>/openai</code></td><td>api.openai.com</td><td>chat, responses, embeddings - stream + non-stream, cached tokens</td></tr>
+          <tr><td><code>/anthropic</code></td><td>api.anthropic.com</td><td>messages - stream + non-stream, cache read/write</td></tr>
           <tr><td><code>/gemini</code></td><td>generativelanguage.googleapis.com</td><td>generateContent + streamGenerateContent, thinking tokens</td></tr>
           <tr><td><code>/openrouter</code> <code>/mistral</code> <code>/deepseek</code> <code>/xai</code> <code>/groq</code> <code>/together</code></td><td>respective APIs</td><td>OpenAI-compatible</td></tr>
           <tr><td><code>/ollama</code></td><td>localhost:11434</td><td>OpenAI-compatible; priced $0 by default</td></tr>
@@ -33,7 +33,7 @@ export default function Page() {
       <p>
         Streaming responses are passed through byte-for-byte while usage is parsed on the side. For
         OpenAI-style streams the gateway quietly adds <code>stream_options: &#123;include_usage: true&#125;</code>
-        so the final chunk carries token counts — and then strips that extra usage-only chunk back out,
+        so the final chunk carries token counts - and then strips that extra usage-only chunk back out,
         so clients that never asked for it still see a normal stream.
       </p>
 
@@ -41,7 +41,7 @@ export default function Page() {
       <p>
         Cost is computed from real token counts against a shipped price table
         (<code>pricing/pricing.json</code>, USD per 1M tokens, longest-prefix match on the model name).
-        Prices <em>drift</em> — the table ships as a sane default; verify against provider price pages and
+        Prices <em>drift</em> - the table ships as a sane default; verify against provider price pages and
         override in config:
       </p>
       <CodeBlock lang="jsonc" code={`"pricing": {

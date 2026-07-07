@@ -1,7 +1,7 @@
 # Contributing
 
 Thanks for considering a contribution. AI Command Center is a small, dependency-free
-codebase on purpose — the bar for new dependencies and new surface area is high, and
+codebase on purpose - the bar for new dependencies and new surface area is high, and
 that keeps it easy to audit and trivial to run.
 
 ## Ground rules
@@ -10,7 +10,7 @@ that keeps it easy to audit and trivial to run.
   dashboard vendors Chart.js and nothing else. A PR that adds an `npm` runtime
   dependency needs a strong justification.
 - **Tests come with the change.** Every behavior change or fix ships with a test
-  under `packages/gateway/test/`. Run `npm test` — all tests must pass.
+  under `packages/gateway/test/`. Run `npm test` - all tests must pass.
 - **Match the surrounding style.** No formatter is enforced; mirror the existing
   code (2-space indent, small focused modules, comments only where they earn it).
 - **Keep it truthful.** Docs, the README, and the comparison table must stay
@@ -50,9 +50,9 @@ docs/                 supporting docs (demo script, etc.)
 ## Adding a provider or pricing
 
 - **New provider**: add an entry to `BUILTIN_PROVIDERS` in `src/providers.js`
-  (set `kind` to `openai`/`anthropic`/`gemini` — most are `openai`-compatible).
+  (set `kind` to `openai`/`anthropic`/`gemini` - most are `openai`-compatible).
 - **New/updated model price**: edit `pricing/pricing.json` (USD per 1M tokens,
-  longest-prefix match). Cite the provider's price page in the PR — prices drift.
+  longest-prefix match). Cite the provider's price page in the PR - prices drift.
 
 ## Reporting bugs / security
 

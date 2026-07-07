@@ -1,5 +1,5 @@
 /**
- * AI Command Center — Node.js integration demo (zero npm dependencies).
+ * AI Command Center - Node.js integration demo (zero npm dependencies).
  *
  * Run the gateway first:  npx ai-command-center start
  * Then:                   node demo.mjs
@@ -15,7 +15,7 @@ init({ project: 'node-demo' });
 //   export OPENAI_BASE_URL=http://localhost:4321/p/node-demo/openai/v1 )
 
 if (process.env.OPENAI_API_KEY) {
-  // Plain fetch — any OpenAI client library works the same way.
+  // Plain fetch - any OpenAI client library works the same way.
   const res = await fetch(`${url('openai')}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -44,7 +44,7 @@ if (process.env.OPENAI_API_KEY) {
     console.log('openai (streamed):', text.trim());
   }
 } else {
-  console.log('No OPENAI_API_KEY — using the /api/track fallback instead.');
+  console.log('No OPENAI_API_KEY - using the /api/track fallback instead.');
   const ok = await track({
     provider: 'openai',
     model: 'gpt-4o-mini',

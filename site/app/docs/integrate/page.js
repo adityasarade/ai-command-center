@@ -52,7 +52,7 @@ client = Anthropic(base_url="http://localhost:4321/p/invoice-bot/anthropic")`} /
 client = genai.Client(http_options={"base_url": "http://localhost:4321/p/invoice-bot/gemini"})`} />
 
       <h2>Optional thin SDKs</h2>
-      <p>They do nothing but set those env vars for you — use them or skip them.</p>
+      <p>They do nothing but set those env vars for you - use them or skip them.</p>
       <CodeBlock lang="python" code={`import aicc
 aicc.init(project="invoice-bot")   # before you construct any client`} />
       <CodeBlock lang="js" code={`import { init } from "@ai-command-center/sdk";
@@ -69,7 +69,7 @@ init({ project: "support-bot" });`} />
 
       <div className="callout">
         With <Link href="/docs/auth">auth enabled</Link>, the <code>/p/&lt;project&gt;</code> segment becomes
-        <code> /k/&lt;gateway-key&gt;</code> — the key both authenticates the call and assigns its project.
+        <code> /k/&lt;gateway-key&gt;</code> - the key both authenticates the call and assigns its project.
         Run <code>npx ai-command-center snippets --project &lt;name&gt;</code> to print the exact URLs with the key filled in.
       </div>
 

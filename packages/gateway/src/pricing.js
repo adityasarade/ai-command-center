@@ -20,9 +20,9 @@ export function normalizeModel(model) {
 
 export class PricingEngine {
   /**
-   * @param {object} overrides  config.pricing — merged over the shipped table.
+   * @param {object} overrides  config.pricing - merged over the shipped table.
    * Keys: "model-prefix", "provider:model-prefix", or "provider:*".
-   * Values: { in, out, cacheRead?, cacheWrite? } — USD per 1M tokens. Null disables a shipped entry.
+   * Values: { in, out, cacheRead?, cacheWrite? } - USD per 1M tokens. Null disables a shipped entry.
    */
   constructor(overrides = {}) {
     const shipped = JSON.parse(
@@ -35,7 +35,7 @@ export class PricingEngine {
       this.table[key.toLowerCase()] = price;
     }
     // Parse keys into {provider, modelPrefix}. Sort by modelPrefix length so the
-    // most specific model match wins — and crucially compare the MODEL part only,
+    // most specific model match wins - and crucially compare the MODEL part only,
     // not including any "provider:" qualifier (else "openai:gpt-4o" would out-rank
     // and wrongly capture "gpt-4o-mini"). Qualified keys win length ties.
     this.entries = Object.keys(this.table)

@@ -33,7 +33,7 @@ const STRIP_RESPONSE_HEADERS = new Set([
   'transfer-encoding',
   'connection',
   'keep-alive',
-  // Never let an upstream's CORS headers reach the browser — the gateway sets its own.
+  // Never let an upstream's CORS headers reach the browser - the gateway sets its own.
   'access-control-allow-origin',
   'access-control-allow-credentials',
   'access-control-expose-headers',
@@ -256,7 +256,7 @@ export function createProxyHandler({ table, config, pricing, store }) {
       try {
         ({ usage, model: respModel } = extractFromJson(provider.kind, JSON.parse(jsonText)));
       } catch {
-        /* unparseable body — leave usage null */
+        /* unparseable body - leave usage null */
       }
     }
 

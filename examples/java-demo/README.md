@@ -1,6 +1,6 @@
 # Java integration
 
-No special SDK needed — point any OpenAI-compatible client at the gateway.
+No special SDK needed - point any OpenAI-compatible client at the gateway.
 
 ## Official `openai-java`
 
@@ -22,7 +22,7 @@ ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
 System.out.println(client.chat().completions().create(params));
 ```
 
-Or zero code changes — the official SDK honors the standard env var:
+Or zero code changes - the official SDK honors the standard env var:
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:4321/p/java-demo/openai/v1"
@@ -45,4 +45,4 @@ OpenAiChatModel model = OpenAiChatModel.builder()
 ```
 
 Every call now shows up on the dashboard at http://localhost:4321 with tokens,
-cost, and latency — grouped under the `java-demo` project.
+cost, and latency - grouped under the `java-demo` project.

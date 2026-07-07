@@ -1,5 +1,5 @@
 /**
- * @ai-command-center/sdk — thin client for AI Command Center.
+ * @ai-command-center/sdk - thin client for AI Command Center.
  *
  *   import { init } from '@ai-command-center/sdk';
  *   init({ project: 'support-bot' });      // BEFORE creating clients
@@ -8,7 +8,7 @@
  *   const client = new OpenAI();           // unchanged code, now fully tracked
  *
  * Only sets standard env vars (OPENAI_BASE_URL, ANTHROPIC_BASE_URL,
- * GOOGLE_GEMINI_BASE_URL). API keys are untouched — the gateway passes them through.
+ * GOOGLE_GEMINI_BASE_URL). API keys are untouched - the gateway passes them through.
  */
 
 const DEFAULT_GATEWAY = 'http://localhost:4321';
@@ -38,7 +38,7 @@ export function init({ project = 'default', key, gateway, check = true } = {}) {
   if (check) {
     fetch(`${gw}/health`, { signal: AbortSignal.timeout(1500) }).catch(() => {
       console.error(
-        `[aicc] warning: no AI Command Center gateway at ${gw} — ` +
+        `[aicc] warning: no AI Command Center gateway at ${gw} - ` +
           `calls will fail until you run: npx ai-command-center start`,
       );
     });

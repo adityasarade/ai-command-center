@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-// Seeded, static sample data — same shape and proportions the real `aicc demo`
+// Seeded, static sample data - same shape and proportions the real `aicc demo`
 // produces. This is a faithful, click-around preview; no backend involved.
 const COLORS = ['#4c8dff', '#21c17a', '#e0a52a', '#3fb950', '#a78bfa'];
 const RATES = { INR: 95.4, USD: 1, EUR: 0.88 };
@@ -57,13 +57,13 @@ export function DemoDashboard() {
   const maxSeries = Math.max(...d.series);
 
   return (
-    <div className="demo" aria-label="Sample AI Command Center dashboard — spend, requests, and per-project cost, with currency and range controls">
+    <div className="demo" aria-label="Sample AI Command Center dashboard - spend, requests, and per-project cost, with currency and range controls">
       <span className="sr-only" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
         Interactive sample dashboard. Toggle display currency and time range below.
       </span>
       <div className="demo-bar">
         <span className="dots"><i /><i /><i /></span>
-        <span className="title">localhost:4321 — dashboard</span>
+        <span className="title">localhost:4321 - dashboard</span>
         <span className="demo-seg" role="group" aria-label="currency">
           {['INR', 'USD', 'EUR'].map((c) => (
             <button key={c} className={c === cur ? 'on' : ''} onClick={() => setCur(c)}>{SYM[c]}</button>

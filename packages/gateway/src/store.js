@@ -22,7 +22,7 @@ export class Store extends EventEmitter {
       const raw = fs.readFileSync(this.file, 'utf8');
       // Repair a crash-truncated file (last line lacks a trailing newline):
       // truncate back to the last complete record so the next append doesn't
-      // concatenate onto — and silently lose — a partial line.
+      // concatenate onto - and silently lose - a partial line.
       if (raw.length && !raw.endsWith('\n')) {
         const lastNl = raw.lastIndexOf('\n');
         try {
@@ -56,7 +56,7 @@ export class Store extends EventEmitter {
 
   appendMany(records) {
     if (!records.length) return;
-    // Avoid `push(...records)` — spreading a large array overflows the call stack.
+    // Avoid `push(...records)` - spreading a large array overflows the call stack.
     for (const r of records) this.records.push(r);
     const lines = records.map((r) => JSON.stringify(r)).join('\n') + '\n';
     this._chain = this._chain

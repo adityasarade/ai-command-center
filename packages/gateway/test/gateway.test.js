@@ -39,7 +39,7 @@ before(async () => {
     },
     upstreams: { openai: mock.url, anthropic: mock.url, gemini: mock.url },
     pricing: { 'custom-finetune': { in: 100, out: 200 } },
-    // manual rates keep tests hermetic — no live FX fetch
+    // manual rates keep tests hermetic - no live FX fetch
     currency: { default: 'INR', options: ['INR', 'USD', 'EUR'], rates: { INR: 80, EUR: 0.9 } },
   };
   gw = createGateway(config);

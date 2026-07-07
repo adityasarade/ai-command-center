@@ -6,7 +6,7 @@ import path from 'node:path';
  * All stored/computed costs stay in USD; conversion happens at display time.
  *
  * Rate sources, in order:
- *   1. Manual rates in config (`currency.rates`) — never fetches, never stale.
+ *   1. Manual rates in config (`currency.rates`) - never fetches, never stale.
  *   2. Live fetch (frankfurter.app → open.er-api.com fallback), cached to
  *      dataDir/fx.json and refreshed every 12h.
  *   3. Stale cache from a previous run.
@@ -16,7 +16,7 @@ import path from 'node:path';
 const REFRESH_MS = 12 * 3600e3;
 const FETCH_TIMEOUT_MS = 5000;
 
-// Safety net only — real values come from the live fetch or config.
+// Safety net only - real values come from the live fetch or config.
 const BUILTIN_RATES = { USD: 1, INR: 95.4, EUR: 0.88 };
 const BUILTIN_STAMP = '2026-07 approximate';
 
@@ -113,7 +113,7 @@ export class FxService {
         /* try next source */
       }
     }
-    // All sources failed — keep whatever we had, mark stale.
+    // All sources failed - keep whatever we had, mark stale.
     if (this.state) this.state.stale = true;
   }
 

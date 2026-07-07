@@ -22,7 +22,7 @@ function mulberry32(seed) {
   };
 }
 
-// Hour-of-day weights (local time) — office hours heavy, small overnight batch jobs.
+// Hour-of-day weights (local time) - office hours heavy, small overnight batch jobs.
 const HOUR_WEIGHTS = [1, 1, 1, 2, 2, 2, 3, 5, 8, 12, 14, 15, 13, 12, 14, 15, 14, 12, 10, 8, 6, 4, 2, 1];
 
 const PROJECTS = [
@@ -106,14 +106,14 @@ export function generateDemoRecords(pricing, { days = 14, now = Date.now(), seed
         let provider = mix.provider;
         let model = mix.model;
 
-        // Incident: a few days ago claims-copilot ran Opus between 10:00–16:00 (config slip).
+        // Incident: a few days ago claims-copilot ran Opus between 10:00-16:00 (config slip).
         const isSpike = project.name === 'claims-copilot' && d === spikeD && hour >= 10 && hour < 16;
         if (isSpike) {
           provider = 'anthropic';
           model = 'claude-opus-4-5';
         }
 
-        // Incident: yesterday 14:00–15:00 support-chatbot hit rate limits.
+        // Incident: yesterday 14:00-15:00 support-chatbot hit rate limits.
         const isErrorBurst =
           project.name === 'support-chatbot' && d === 1 && hour === 14 && rand() < 0.55;
 

@@ -35,7 +35,7 @@ const client = new OpenAI({
   {
     label: 'env var (any language)',
     lang: 'bash',
-    code: `# no code change at all — the SDK reads this
+    code: `# no code change at all - the SDK reads this
 export OPENAI_BASE_URL="http://localhost:4321/p/my-app/openai/v1"
 export ANTHROPIC_BASE_URL="http://localhost:4321/p/my-app/anthropic"`,
   },
@@ -50,11 +50,11 @@ export ANTHROPIC_BASE_URL="http://localhost:4321/p/my-app/anthropic"`,
 ];
 
 const FEATURES = [
-  ['01', 'One line to onboard', 'Change a base URL — or one env var — and any project starts reporting. No new library to install, no per-language SDK, no instrumentation.'],
-  ['02', 'Any language', 'It’s an HTTP gateway. Python, JS, Java, Go, Rust, shell — if it can call an LLM, it works, identically.'],
+  ['01', 'One line to onboard', 'Change a base URL - or one env var - and any project starts reporting. No new library to install, no per-language SDK, no instrumentation.'],
+  ['02', 'Any language', 'It’s an HTTP gateway. Python, JS, Java, Go, Rust, shell - if it can call an LLM, it works, identically.'],
   ['03', 'Every provider', 'OpenAI, Anthropic, Gemini, OpenRouter, Mistral, DeepSeek, xAI, Groq, Together, Ollama, and any OpenAI-compatible endpoint.'],
   ['04', 'Cost you can trust', 'Exact per-request USD from real token counts (incl. cached tokens), shown in ₹ / $ / € with live rates. Verified by the eval suite.'],
-  ['05', 'Your keys, your data', 'Provider keys pass straight through. Prompts and responses are never stored — metadata only. Telemetry stays on your machine.'],
+  ['05', 'Your keys, your data', 'Provider keys pass straight through. Prompts and responses are never stored - metadata only. Telemetry stays on your machine.'],
   ['06', 'Zero dependencies', 'The whole gateway is plain Node with no npm runtime deps. One command, one file of telemetry (JSONL). Trivial to audit and run.'],
 ];
 
@@ -66,7 +66,7 @@ export default function Home() {
         <h1>One gateway, every AI project, <span className="grad">one dashboard.</span></h1>
         <p className="lede">
           AI Command Center is a dependency-free LLM gateway and self-hosted usage &amp; cost dashboard.
-          Point any project at it — any language, one command — and watch tokens, cost, latency and
+          Point any project at it - any language, one command - and watch tokens, cost, latency and
           errors for every AI product land in one place.
         </p>
         <div className="hero-actions">
@@ -79,7 +79,7 @@ export default function Home() {
       <section className="wrap" style={{ paddingBottom: 20 }}>
         <DemoDashboard />
         <p className="hero-note" style={{ marginTop: 10, textAlign: 'center' }}>
-          ↑ a live, clickable sample — toggle currency and range. Run <code>npx ai-command-center demo</code> for the real thing.
+          ↑ a live, clickable sample - toggle currency and range. Run <code>npx ai-command-center demo</code> for the real thing.
         </p>
       </section>
 
@@ -91,9 +91,9 @@ export default function Home() {
           </div>
           <div className="grid-2">
             <div>
-              <p style={{ marginBottom: 10, color: 'var(--ink-2)' }}>1 — Start the gateway + dashboard:</p>
+              <p style={{ marginBottom: 10, color: 'var(--ink-2)' }}>1 - Start the gateway + dashboard:</p>
               <CodeBlock lang="bash" code={`npx ai-command-center\n# dashboard opens at http://localhost:4321`} />
-              <p style={{ margin: '18px 0 10px', color: 'var(--ink-2)' }}>2 — Point any project at it:</p>
+              <p style={{ margin: '18px 0 10px', color: 'var(--ink-2)' }}>2 - Point any project at it:</p>
               <CodeTabs items={SNIPPETS} />
             </div>
             <div>
@@ -140,7 +140,7 @@ export default function Home() {
             <span className="mono-label">Measured, not claimed</span>
             <h2>Numbers from the eval suite.</h2>
             <p>
-              Reproduce them yourself with <code>npm run evals</code> — they run against a mock upstream,
+              Reproduce them yourself with <code>npm run evals</code> - they run against a mock upstream,
               no API keys, no network.
             </p>
           </div>
@@ -159,7 +159,7 @@ export default function Home() {
             <span className="mono-label">Honest positioning</span>
             <h2>Not a tracing platform. Not a router. A cost dashboard that just runs.</h2>
             <p>
-              Tools like Langfuse, Helicone, and LangSmith do far more — full traces, evals, prompt
+              Tools like Langfuse, Helicone, and LangSmith do far more - full traces, evals, prompt
               management. LiteLLM and Portkey are richer gateways. If you need those, use them.
               Reach for this when the question is simply <em>“how many tokens and dollars is each project
               spending?”</em> and you want the answer in one command.

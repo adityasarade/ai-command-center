@@ -21,11 +21,11 @@ const SITE = 'https://aicommandcenter.vercel.app';
 export const metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: 'AI Command Center — one gateway, every AI project, one dashboard',
-    template: '%s — AI Command Center',
+    default: 'AI Command Center - one gateway, every AI project, one dashboard',
+    template: '%s - AI Command Center',
   },
   description:
-    'A dependency-free LLM gateway and self-hosted usage/cost dashboard. Point any project at it — any language, one command — and see tokens, cost and latency across every AI product in one place.',
+    'A dependency-free LLM gateway and self-hosted usage/cost dashboard. Point any project at it - any language, one command - and see tokens, cost and latency across every AI product in one place.',
   keywords: ['LLM', 'observability', 'cost tracking', 'OpenAI', 'Anthropic', 'Gemini', 'gateway', 'self-hosted', 'LLMOps'],
   authors: [{ name: 'Aditya Sarade' }],
   openGraph: {

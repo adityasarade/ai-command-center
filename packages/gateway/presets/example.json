@@ -1,0 +1,14 @@
+{
+  "_comment": "Example company build. Copy this to presets/<yourco>.json and edit, then run: npx ai-command-center start --preset <yourco> (or set \"preset\": \"<yourco>\" in your config). Add central provider keys and allowedOrigins in your own config file, not here.",
+  "branding": {
+    "name": "Acme AI Command Center",
+    "short": "Acme AICC",
+    "tagline": "Centralized AI usage and cost across every product.",
+    "accent": "#0b7d6f",
+    "productUrl": "https://example.com"
+  },
+  "currency": {
+    "default": "INR",
+    "options": ["INR", "USD", "EUR"]
+  }
+}

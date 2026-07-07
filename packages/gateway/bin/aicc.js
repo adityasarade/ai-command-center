@@ -89,8 +89,8 @@ async function cmdStart() {
   const authLine = auth.disabled
     ? yellow('disabled (--no-auth)')
     : auth.locked
-      ? green(`on — ${auth.db.users.length} user(s), ${auth.db.projects.length} project key(s)`)
-      : yellow('setup pending — open the dashboard to create the admin account');
+      ? green(`on - ${auth.db.users.length} user(s), ${auth.db.projects.length} project key(s)`)
+      : yellow('setup pending - open the dashboard to create the admin account');
   console.log(`  ${bold('Dashboard')}   ${green(url)}`);
   console.log(`  ${bold('Auth')}        ${authLine}`);
   console.log(`  ${bold('Data')}        ${dim(config.dataDir)}`);
@@ -149,7 +149,7 @@ async function cmdDemo() {
     const seeded = seedDemo(store, pricing, { days });
     await store.flush();
     console.log(green(`✔ Seeded ${seeded} demo records (${days} days, 4 sample projects).`));
-    console.log(dim(`  (no running gateway detected — wrote directly to ${store.file};`));
+    console.log(dim(`  (no running gateway detected - wrote directly to ${store.file};`));
     console.log(dim('   a gateway running on another port/data-dir will not see these records)'));
     console.log(`  Start the dashboard: ${bold('npx ai-command-center start')}`);
   }
@@ -201,7 +201,7 @@ async function cmdStats() {
   const money = (vUsd) => fmtCur((vUsd || 0) * rate, code);
   const t = stats.totals;
   console.log('');
-  console.log(`  ${bold(cyan('AI Command Center'))} ${dim(`— last ${range}`)}`);
+  console.log(`  ${bold(cyan('AI Command Center'))} ${dim(`- last ${range}`)}`);
   console.log('');
   const usdNote = code !== 'USD' ? dim(` (≈ ${fmtUsd(t.costUsd)}${fx.stale ? ', approx fx' : ''})`) : '';
   console.log(`  Spend        ${bold(money(t.costUsd))}${usdNote}`);
@@ -263,11 +263,11 @@ async function cmdUser() {
     });
     console.log(green(`✔ created ${user.role} "${user.username}"`));
     if (await liveGateway(config)) {
-      console.log(yellow('  a gateway is currently running — restart it to pick up auth changes'));
+      console.log(yellow('  a gateway is currently running - restart it to pick up auth changes'));
     }
   } else if (action === 'list') {
     if (!auth.db.users.length) {
-      console.log(dim('no users yet — auth activates once the first admin is created'));
+      console.log(dim('no users yet - auth activates once the first admin is created'));
       return;
     }
     for (const u of auth.db.users) {
@@ -275,7 +275,7 @@ async function cmdUser() {
       console.log(`  ${pu.username.padEnd(24)} ${pu.role.padEnd(8)} ${dim(pu.teamName || '(no team)')}`);
     }
   } else {
-    throw new Error('usage: aicc user <add|list> — user management lives in the dashboard (settings)');
+    throw new Error('usage: aicc user <add|list> - user management lives in the dashboard (settings)');
   }
 }
 
@@ -296,7 +296,7 @@ async function liveGateway(config) {
     }
   }
   // Otherwise probe the configured address, but only trust it if it serves our
-  // data dir — never operate on a gateway backing a different store.
+  // data dir - never operate on a gateway backing a different store.
   const url = `http://${displayHost(config.host)}:${config.port}`;
   if (await isOurGateway(url, config, false)) return url;
   return null;
@@ -379,10 +379,10 @@ export function snippetsText(
   return `
 ${b('── Plug any project into AI Command Center ──────────────────────────')}
 
-${b('Zero-code (any language)')} ${d('— just point the SDK at the gateway via env vars:')}
+${b('Zero-code (any language)')} ${d('- just point the SDK at the gateway via env vars:')}
   ${cy(`export OPENAI_BASE_URL="${base}/openai/v1"`)}
   ${cy(`export ANTHROPIC_BASE_URL="${base}/anthropic"`)}
-  ${d('Your provider API keys stay exactly where they are — the gateway passes them through.')}
+  ${d('Your provider API keys stay exactly where they are - the gateway passes them through.')}
 
 ${b('Python (OpenAI SDK)')}
   from openai import OpenAI
@@ -412,14 +412,14 @@ ${b('curl')}
     -H "Authorization: Bearer $OPENAI_API_KEY" -H "Content-Type: application/json" \\
     -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hi"}]}'
 
-${b('Anything else (batch jobs, unsupported providers)')} ${d('— report usage directly:')}
+${b('Anything else (batch jobs, unsupported providers)')} ${d('- report usage directly:')}
   curl -X POST ${url}/api/track -H "Content-Type: application/json"${trackAuth} \\
     -d '{"project":"${project}","provider":"openai","model":"gpt-4o-mini","tokensIn":1200,"tokensOut":300}'
 
 ${
   keyed
     ? d('The gateway key in the URL both authenticates the call and assigns it to your project.')
-    : d(`Replace "${project}" with your project name — that's how calls are grouped on the dashboard.`) +
+    : d(`Replace "${project}" with your project name - that's how calls are grouped on the dashboard.`) +
       '\n' +
       d('Alternative to path prefix: send header  x-aicc-project: ' + project)
 }
@@ -428,7 +428,7 @@ ${
 
 function printHelp() {
   console.log(`
-${bold(cyan('AI Command Center'))} ${dim('v' + PKG.version)} — one gateway, every AI project, one dashboard.
+${bold(cyan('AI Command Center'))} ${dim('v' + PKG.version)} - one gateway, every AI project, one dashboard.
 
 ${bold('Usage')}
   npx ai-command-center [command] [options]
@@ -439,7 +439,7 @@ ${bold('Commands')}
   clear      Remove demo data (--all wipes everything)
   stats      Print a usage/cost summary in the terminal
   snippets   Copy-paste integration code for every language
-  user       add|list — CLI escape hatch (user management lives in the dashboard)
+  user       add|list - CLI escape hatch (user management lives in the dashboard)
   help       Show this help
 
 ${bold('Options')}
@@ -447,7 +447,7 @@ ${bold('Options')}
   --host <h>        Bind host (default 127.0.0.1; use 0.0.0.0 to share on LAN)
   --data-dir <dir>  Where telemetry is stored (default ~/.ai-command-center)
   --config <file>   Extra config file (JSON)
-  --preset <name>   Load a built-in config preset (e.g. medikabazaar)
+  --preset <name>   Load a built-in config preset (e.g. example)
   --project <name>  Project name used in snippets output
   --range <r>       stats range: 1h | 24h | 7d | 30d | 90d | all
   --days <n>        demo: days of history to generate (default 14)

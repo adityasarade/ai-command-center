@@ -66,7 +66,7 @@ test('openai responses-api accumulator: nested response.usage', () => {
   assert.equal(usage.cacheRead, 30);
 });
 
-test('gemini non-SSE stream returns JSON array — last usage wins', () => {
+test('gemini non-SSE stream returns JSON array - last usage wins', () => {
   const { usage, model } = extractFromJson('gemini', [
     { usageMetadata: { promptTokenCount: 10 }, modelVersion: 'gemini-2.5-pro' },
     { usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 7 } },
@@ -123,7 +123,7 @@ const rec = (ts, extra = {}) => ({
 
 test('stats range=all sees unsorted/backfilled records', () => {
   const now = Date.now();
-  // newest record first in the array — simulates live append then historical backfill
+  // newest record first in the array - simulates live append then historical backfill
   const records = [rec(now), rec(now - 10 * 24 * 3600e3), rec(now - 5 * 24 * 3600e3)];
   const stats = computeStats(records, { range: 'all' });
   assert.equal(stats.totals.requests, 3);

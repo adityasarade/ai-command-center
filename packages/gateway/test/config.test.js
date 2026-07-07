@@ -16,10 +16,10 @@ test('defaults: OSS branding, INR-first currency', () => {
   assert.equal(cfg.auth, true);
 });
 
-test('medikabazaar preset overrides branding, user config still wins', () => {
-  assert.ok(listPresets().includes('medikabazaar'));
-  const cfg = loadConfig({ preset: 'medikabazaar' });
-  assert.match(cfg.branding.name, /Medikabazaar/);
+test('example preset overrides branding, user config still wins', () => {
+  assert.ok(listPresets().includes('example'));
+  const cfg = loadConfig({ preset: 'example' });
+  assert.match(cfg.branding.name, /Acme/);
   assert.equal(cfg.branding.accent, '#0b7d6f');
   assert.equal(cfg.currency.default, 'INR');
   // preset does not clobber unrelated defaults
@@ -31,7 +31,7 @@ test('unknown preset throws with guidance', () => {
 });
 
 test('--flag=value and precedence: CLI port beats everything', () => {
-  const cfg = loadConfig({ preset: 'medikabazaar', port: '5599' });
+  const cfg = loadConfig({ preset: 'example', port: '5599' });
   assert.equal(cfg.port, 5599);
 });
 

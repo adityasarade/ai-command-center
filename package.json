@@ -2,7 +2,7 @@
   "name": "ai-command-center-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "AI Command Center — plug-and-play LLM gateway + consolidated usage/cost dashboard for all your AI projects, in any language.",
+  "description": "AI Command Center - plug-and-play LLM gateway + consolidated usage/cost dashboard for all your AI projects, in any language.",
   "license": "MIT",
   "author": "Aditya Sarade",
   "repository": {

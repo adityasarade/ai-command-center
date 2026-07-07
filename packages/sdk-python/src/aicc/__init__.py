@@ -1,4 +1,4 @@
-"""aicc — thin client for AI Command Center.
+"""aicc - thin client for AI Command Center.
 
 The gateway does all the real work; this helper just points the official
 provider SDKs at it via their standard environment variables.
@@ -11,7 +11,7 @@ provider SDKs at it via their standard environment variables.
 
 Works with: openai (OPENAI_BASE_URL), anthropic (ANTHROPIC_BASE_URL),
 google-genai (GOOGLE_GEMINI_BASE_URL), and anything else via aicc.url("provider").
-Your API keys are untouched — the gateway passes them through.
+Your API keys are untouched - the gateway passes them through.
 """
 
 from __future__ import annotations
@@ -63,14 +63,14 @@ def init(
 ) -> AiccSession:
     """Route this process's AI SDK traffic through AI Command Center.
 
-    Call BEFORE constructing OpenAI()/Anthropic()/genai.Client() — the SDKs
+    Call BEFORE constructing OpenAI()/Anthropic()/genai.Client() - the SDKs
     read their base-URL environment variables at construction time.
 
-    project  – how calls are grouped on the dashboard.
-    key      – project gateway key (required when the gateway has auth enabled;
+    project  - how calls are grouped on the dashboard.
+    key      - project gateway key (required when the gateway has auth enabled;
                defaults to $AICC_KEY). Get it from the dashboard → settings.
-    gateway  – gateway origin; defaults to $AICC_GATEWAY or http://localhost:4321.
-    check    – ping the gateway and print a warning if it is unreachable.
+    gateway  - gateway origin; defaults to $AICC_GATEWAY or http://localhost:4321.
+    check    - ping the gateway and print a warning if it is unreachable.
     """
     global _session
     gw = (gateway or os.environ.get("AICC_GATEWAY") or DEFAULT_GATEWAY).rstrip("/")
@@ -92,7 +92,7 @@ def init(
                 json.loads(res.read().decode("utf-8"))
         except Exception:
             print(
-                f"[aicc] warning: no AI Command Center gateway at {gw} — "
+                f"[aicc] warning: no AI Command Center gateway at {gw} - "
                 f"calls will fail until you run: npx ai-command-center start",
                 file=sys.stderr,
             )
@@ -122,7 +122,7 @@ def track(
     """Report usage for calls the gateway can't see (batch jobs, exotic providers).
 
     Returns True when the record was accepted, False when the gateway was
-    unreachable (never raises — telemetry must not break the host app).
+    unreachable (never raises - telemetry must not break the host app).
     """
     gw = _session.gateway if _session else (os.environ.get("AICC_GATEWAY") or DEFAULT_GATEWAY).rstrip("/")
     gw_key = (_session.key if _session else None) or os.environ.get("AICC_KEY")

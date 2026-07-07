@@ -80,7 +80,7 @@ export function createGateway(config) {
         });
       }
 
-      // ---- dashboard & static assets (open — the app gates itself via /api/auth/state) ----
+      // ---- dashboard & static assets (open - the app gates itself via /api/auth/state) ----
       if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
         return serveStatic(res, 'index.html');
       }
@@ -234,7 +234,7 @@ export function createGateway(config) {
 
       return respondJson(res, 404, {
         error: {
-          message: `No route for ${pathname}. Proxy paths look like /openai/v1/chat/completions, /anthropic/v1/messages, /gemini/v1beta/models/... — optionally prefixed with /p/<project-name> (or /k/<gateway-key> once auth is enabled). Known providers: ${Object.keys(table).join(', ')}.`,
+          message: `No route for ${pathname}. Proxy paths look like /openai/v1/chat/completions, /anthropic/v1/messages, /gemini/v1beta/models/... - optionally prefixed with /p/<project-name> (or /k/<gateway-key> once auth is enabled). Known providers: ${Object.keys(table).join(', ')}.`,
         },
       });
     } catch (err) {
@@ -422,7 +422,7 @@ function headerValue(req, name) {
 }
 
 function numOrNull(v) {
-  // Treat null/undefined/'' as absent — Number(null) is 0, which would otherwise
+  // Treat null/undefined/'' as absent - Number(null) is 0, which would otherwise
   // record real usage at $0 and skip the pricing engine.
   if (v == null || v === '') return null;
   const n = Number(v);

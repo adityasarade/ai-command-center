@@ -37,7 +37,7 @@ npx ai-command-center user list`} />
       <h2>Project gateway keys (the proxy under auth)</h2>
       <p>
         Once locked, each project gets its own key. The key both authenticates the request and
-        assigns it to that project — so the URL carries the key instead of the project name:
+        assigns it to that project - so the URL carries the key instead of the project name:
       </p>
       <CodeBlock lang="bash" code={`# base URL becomes /k/<gateway-key>/… instead of /p/<project>/…
 export OPENAI_BASE_URL="http://localhost:4321/k/aicc_9f3.../openai/v1"
@@ -50,7 +50,7 @@ export OPENAI_BASE_URL="http://localhost:4321/k/aicc_9f3.../openai/v1"
 
       <div className="callout">
         Auth today is username/password with signed <code>HttpOnly</code> session cookies (scrypt-hashed
-        passwords, all dependency-free). There is no SSO/OAuth yet — see{' '}
+        passwords, all dependency-free). There is no SSO/OAuth yet - see{' '}
         <a href="/docs/security">Security</a> for the hardening path before external multi-tenant use.
       </div>
 

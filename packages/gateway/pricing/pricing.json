@@ -1,5 +1,5 @@
 {
-  "_comment": "USD per 1M tokens. Longest-prefix match on normalized model name (lowercase, 'models/' prefix and date suffixes stripped). Keys may be provider-qualified ('openai:gpt-4o') or plain ('gpt-4o'); provider-qualified wins. 'provider:*' sets a provider-wide default. Override or extend via the 'pricing' object in your aicc config — these ship as sane defaults and WILL drift; always verify against provider price pages.",
+  "_comment": "USD per 1M tokens. Longest-prefix match on normalized model name (lowercase, 'models/' prefix and date suffixes stripped). Keys may be provider-qualified ('openai:gpt-4o') or plain ('gpt-4o'); provider-qualified wins. 'provider:*' sets a provider-wide default. Override or extend via the 'pricing' object in your aicc config - these ship as sane defaults and WILL drift; always verify against provider price pages.",
 
   "gpt-5.1": { "in": 1.25, "out": 10, "cacheRead": 0.125 },
   "gpt-5-mini": { "in": 0.25, "out": 2, "cacheRead": 0.025 },

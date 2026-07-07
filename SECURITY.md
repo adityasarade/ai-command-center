@@ -14,14 +14,14 @@ to `127.0.0.1`. Its security posture:
 
 - **Your provider API keys pass through** to the upstream provider unchanged;
   they are never written to the telemetry log.
-- **No prompt or response bodies are stored** — only metadata (model, tokens,
+- **No prompt or response bodies are stored** - only metadata (model, tokens,
   cost, latency, status, project).
 - **Cross-origin protection**: the gateway only accepts browser requests from
   its own origin or origins you explicitly list in `allowedOrigins`. A random web
   page cannot spend your keys through the proxy or wipe your telemetry. Server-side
   callers (no `Origin` header) are unaffected.
 - **Central/operator keys are never handed to untrusted cross-origin callers.**
-- **Auth**: optional but on by default — open until the first admin account is
+- **Auth**: optional but on by default - open until the first admin account is
   created, then dashboard/API require a session and the proxy requires a
   per-project gateway key.
 
@@ -33,7 +33,7 @@ to `127.0.0.1`. Its security posture:
   shared network).
 - Rotate project gateway keys if one may have leaked (dashboard → Settings).
 - Auth is username/password + signed session cookies today (no SSO yet) and
-  telemetry is not encrypted at rest — appropriate for an internal tool; review
+  telemetry is not encrypted at rest - appropriate for an internal tool; review
   before external multi-tenant exposure.
 
 ## Supported versions

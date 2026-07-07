@@ -29,7 +29,7 @@
   <g text-anchor="middle">
     <text x="495" y="172" class="t" font-size="10.5">forwards request untouched (key included)</text>
     <text x="495" y="190" class="t" font-size="10.5">streams response straight back</text>
-    <text x="495" y="208" class="m">logs tokens · cost · latency — metadata only</text>
+    <text x="495" y="208" class="m">logs tokens · cost · latency - metadata only</text>
     <text x="495" y="228" class="s">no prompt/response bodies stored</text>
   </g>
 
@@ -48,5 +48,5 @@
 
   <!-- dashboard callout -->
   <line x1="495" y1="245" x2="495" y2="272" stroke="#6e7681" stroke-width="1.6" marker-end="url(#arr)"/>
-  <text x="510" y="268" class="s">→ dashboard: spend, tokens, latency, live feed — per project, in ₹/$/€</text>
+  <text x="510" y="268" class="s">→ dashboard: spend, tokens, latency, live feed - per project, in ₹/$/€</text>
 </svg>

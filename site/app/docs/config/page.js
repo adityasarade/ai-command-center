@@ -7,7 +7,7 @@ export default function Page() {
   return (
     <>
       <h1>Configuration</h1>
-      <p className="lead">Everything is optional — the defaults are sensible. Config is layered, so you only set what you need.</p>
+      <p className="lead">Everything is optional - the defaults are sensible. Config is layered, so you only set what you need.</p>
 
       <h2>Where config comes from</h2>
       <p>Lowest to highest precedence (higher wins):</p>
@@ -29,7 +29,7 @@ export default function Page() {
   // the proxy from the browser). Same-origin + server-side apps never need this.
   "allowedOrigins": [],
 
-  // OPTIONAL central provider keys — injected only when the caller sends none
+  // OPTIONAL central provider keys - injected only when the caller sends none
   // (and never for untrusted cross-origin requests). Callers' own keys win.
   "keys": { "openai": "sk-...", "anthropic": "sk-ant-..." },
 
@@ -70,9 +70,9 @@ export default function Page() {
         A preset seeds branding/currency/etc. that your own config still overrides. This is how the
         same codebase serves both an open-source default and a company build:
       </p>
-      <CodeBlock lang="bash" code={`npx ai-command-center start --preset medikabazaar
-# or in a config file:  { "preset": "medikabazaar", "keys": { ... } }`} />
-      <p>Add your own under <code>presets/&lt;name&gt;.json</code> — the format is just a partial config.</p>
+      <CodeBlock lang="bash" code={`npx ai-command-center start --preset example
+# or in a config file:  { "preset": "example", "keys": { ... } }`} />
+      <p>Add your own under <code>presets/&lt;name&gt;.json</code> - the format is just a partial config.</p>
 
       <h2>Currency &amp; exchange rates</h2>
       <p>

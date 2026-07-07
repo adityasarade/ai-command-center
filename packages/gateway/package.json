@@ -1,7 +1,7 @@
 {
   "name": "ai-command-center",
   "version": "0.1.0",
-  "description": "Plug-and-play LLM gateway + consolidated usage & cost dashboard for every AI project you run — any language, one dashboard, one command.",
+  "description": "Plug-and-play LLM gateway + consolidated usage & cost dashboard for every AI project you run - any language, one dashboard, one command.",
   "type": "module",
   "bin": {
     "ai-command-center": "bin/aicc.js",

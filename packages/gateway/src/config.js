@@ -37,9 +37,9 @@ const DEFAULTS = {
   pricing: {},
   // Display currency (data is always stored in USD; conversion is display-time).
   // default: initial dashboard currency; options: toggle choices;
-  // rates: optional manual { INR: 84, EUR: 0.92 } — set it to skip live FX fetching.
+  // rates: optional manual { INR: 84, EUR: 0.92 } - set it to skip live FX fetching.
   currency: { default: 'INR', options: ['INR', 'USD', 'EUR'], rates: null },
-  // Dashboard/CLI branding — override for a company build (see presets/).
+  // Dashboard/CLI branding - override for a company build (see presets/).
   branding: {
     name: 'AI Command Center',
     short: 'AICC',

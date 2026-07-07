@@ -1,4 +1,4 @@
-"""AI Command Center — Python integration demo.
+"""AI Command Center - Python integration demo.
 
 Run the gateway first:   npx ai-command-center start
 Then:                    python demo.py
@@ -27,7 +27,7 @@ def try_openai() -> bool:
     try:
         from openai import OpenAI
     except ImportError:
-        print("openai package not installed — skipping (pip install openai)")
+        print("openai package not installed - skipping (pip install openai)")
         return False
     client = OpenAI()  # base_url already points at the gateway
     reply = client.chat.completions.create(
@@ -44,7 +44,7 @@ def try_anthropic() -> bool:
     try:
         from anthropic import Anthropic
     except ImportError:
-        print("anthropic package not installed — skipping (pip install anthropic)")
+        print("anthropic package not installed - skipping (pip install anthropic)")
         return False
     client = Anthropic()  # base_url already points at the gateway
     reply = client.messages.create(
@@ -74,6 +74,6 @@ if __name__ == "__main__":
     ran |= try_openai()
     ran |= try_anthropic()
     if not ran:
-        print("No provider API keys found — using the /api/track fallback instead.")
+        print("No provider API keys found - using the /api/track fallback instead.")
         fallback_track()
     print("Open the dashboard: http://localhost:4321")

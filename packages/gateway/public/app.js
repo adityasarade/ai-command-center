@@ -57,7 +57,7 @@
 
   // All stored values are USD; display converts via the gateway's live FX rates.
   const fmtMoney = (vUsd) => {
-    if (vUsd == null || Number.isNaN(vUsd)) return '—';
+    if (vUsd == null || Number.isNaN(vUsd)) return '-';
     const cur = state.cur || 'USD';
     const rate = state.fx?.rates?.[cur] ?? 1;
     const v = vUsd * rate;
@@ -70,19 +70,19 @@
     return nf({ maximumFractionDigits: 2 });
   };
   const fmtUsdPlain = (v) => {
-    if (v == null || Number.isNaN(v)) return '—';
+    if (v == null || Number.isNaN(v)) return '-';
     if (v !== 0 && Math.abs(v) < 0.01) return '$' + v.toFixed(4);
     if (Math.abs(v) >= 1000) return '$' + (v / 1000).toFixed(1) + 'k';
     return '$' + v.toFixed(2);
   };
   const fmtNum = (v) => {
-    if (v == null) return '—';
+    if (v == null) return '-';
     if (Math.abs(v) >= 1e9) return (v / 1e9).toFixed(1) + 'B';
     if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M';
     if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + 'k';
     return String(v);
   };
-  const fmtMs = (v) => (v == null ? '—' : v >= 10000 ? (v / 1000).toFixed(1) + 's' : Math.round(v) + 'ms');
+  const fmtMs = (v) => (v == null ? '-' : v >= 10000 ? (v / 1000).toFixed(1) + 's' : Math.round(v) + 'ms');
   const fmtClock = (ts) =>
     new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const fmtBucket = (ts, bucketMs) => {
@@ -182,9 +182,9 @@
   }
 
   function deltaHtml(cur, prevVal, { moreIsBad }) {
-    if (prevVal == null || prevVal === 0 || cur == null) return '<span class="t-dim">vs prev period: —</span>';
+    if (prevVal == null || prevVal === 0 || cur == null) return '<span class="t-dim">vs prev period: -</span>';
     const pct = ((cur - prevVal) / prevVal) * 100;
-    if (!Number.isFinite(pct)) return '<span class="t-dim">vs prev period: —</span>';
+    if (!Number.isFinite(pct)) return '<span class="t-dim">vs prev period: -</span>';
     const up = pct >= 0;
     const cls = up ? (moreIsBad ? 'delta-up' : 'delta-up good') : moreIsBad ? 'delta-down' : 't-dim';
     return `<span class="${cls}">${up ? '▲' : '▼'} ${Math.abs(pct).toFixed(0)}%</span> <span class="t-dim">vs prev period</span>`;
@@ -394,8 +394,8 @@
       <td class="t-dim">${fmtClock(r.ts)}</td>
       <td><span class="dot" style="background:${projectColor(r.project)}"></span>${esc(r.project)}${r.simulated ? '<span class="tag">demo</span>' : ''}</td>
       <td><span class="t-dim">${esc(r.provider)} ·</span> ${esc(model)}${r.stream ? '<span class="tag">stream</span>' : ''}</td>
-      <td class="num">${r.tokensTotal != null ? `${fmtNum(r.tokensIn)} <span class="t-dim">→</span> ${fmtNum(r.tokensOut)}` : '<span class="t-dim">—</span>'}</td>
-      <td class="num t-cost">${r.costUsd != null ? fmtMoney(r.costUsd) : '<span class="t-dim">—</span>'}</td>
+      <td class="num">${r.tokensTotal != null ? `${fmtNum(r.tokensIn)} <span class="t-dim">→</span> ${fmtNum(r.tokensOut)}` : '<span class="t-dim">-</span>'}</td>
+      <td class="num t-cost">${r.costUsd != null ? fmtMoney(r.costUsd) : '<span class="t-dim">-</span>'}</td>
       <td class="num">${fmtMs(r.latencyMs)}</td>
       <td><span class="status${err ? ' err' : ''}">${err ? (r.status || 'ERR') + (r.errorType === 'client_abort' ? ' abort' : '') : r.status}</span></td>`;
   }
@@ -441,7 +441,7 @@
     const unpriced = stats.totals.unpriced;
     const chipU = $('unpricedChip');
     chipU.hidden = !unpriced;
-    if (unpriced) chipU.textContent = `⚠ ${unpriced} calls on unpriced models — add rates in config`;
+    if (unpriced) chipU.textContent = `⚠ ${unpriced} calls on unpriced models - add rates in config`;
     const chipD = $('demoChip');
     chipD.hidden = !stats.totals.simulated;
     if (stats.totals.simulated) {
@@ -493,7 +493,7 @@
     const setup = mode === 'setup';
     $('gateTitle').textContent = setup ? 'Create admin account' : 'Sign in';
     $('gateDesc').textContent = setup
-      ? 'This first account is the administrator — it manages users, teams, and project keys.'
+      ? 'This first account is the administrator - it manages users, teams, and project keys.'
       : 'AI Command Center is protected. Sign in to continue.';
     $('gateSubmit').textContent = setup ? 'Create admin & sign in' : 'Sign in';
     $('gateForm').dataset.mode = mode;
@@ -553,7 +553,7 @@
         $('emptySnippet').textContent =
           `export OPENAI_BASE_URL="${base}/openai/v1"\n` +
           `export ANTHROPIC_BASE_URL="${base}/anthropic"\n` +
-          `# then run your app exactly as before — that's the whole integration`;
+          `# then run your app exactly as before - that's the whole integration`;
         $('seedBtn').style.display = auth.locked && auth.user?.role !== 'admin' ? 'none' : '';
         if (full) populateProjects(projects);
         return;
@@ -725,7 +725,7 @@
       return;
     }
     const teamOpts = (sel) =>
-      '<option value="">— no team —</option>' +
+      '<option value="">- no team -</option>' +
       data.teams.map((t) => `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
 
     // Projects + gateway keys
@@ -740,7 +740,7 @@
           <div class="admin-item">
             <div class="row1"><strong>${esc(p.name)}</strong>
               <button class="mini danger" data-del-project="${esc(p.name)}">delete</button></div>
-            <div class="meta">team: ${esc(p.teamName || '—')}</div>
+            <div class="meta">team: ${esc(p.teamName || '-')}</div>
             <div class="keyrow">
               <code title="click to copy" data-copy="${esc(p.key)}">${esc(p.key)}</code>
               <button class="mini" data-rotate="${esc(p.name)}">rotate</button>

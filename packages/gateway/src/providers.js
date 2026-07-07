@@ -2,14 +2,14 @@
  * Provider registry.
  *
  * `kind` decides how requests/responses are parsed for usage:
- *   - 'openai'    : OpenAI schema (chat/completions, responses, embeddings) — also used
+ *   - 'openai'    : OpenAI schema (chat/completions, responses, embeddings) - also used
  *                   by every OpenAI-compatible provider (OpenRouter, Mistral, Groq, Ollama…)
  *   - 'anthropic' : Anthropic Messages API
  *   - 'gemini'    : Google Generative Language API
  *
  * `authHeader` is the header the provider expects its API key in; used when the gateway
  * injects a centrally-configured key (pass-through of caller headers always wins).
- * `streamUsageInject` — inject `stream_options: {include_usage: true}` into streaming
+ * `streamUsageInject` - inject `stream_options: {include_usage: true}` into streaming
  * chat.completions requests so the final SSE chunk carries token usage.
  */
 export const BUILTIN_PROVIDERS = {

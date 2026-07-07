@@ -11,11 +11,11 @@ const scryptAsync = promisify(crypto.scrypt);
  * Lifecycle:
  *   - disabled   (config.auth === false / --no-auth): nothing is enforced.
  *   - needsSetup (no users yet): nothing is enforced, dashboard shows a
- *     "create admin" callout — first-run stays friction-free.
+ *     "create admin" callout - first-run stays friction-free.
  *   - locked     (>=1 user): dashboard/API require a session cookie;
  *     proxy routes require a project gateway key (/k/<key>/… or x-aicc-key).
  *
- * Storage: dataDir/auth.json (0600) — users (scrypt-hashed passwords), teams,
+ * Storage: dataDir/auth.json (0600) - users (scrypt-hashed passwords), teams,
  * projects with their gateway keys, and the session-cookie HMAC secret.
  */
 

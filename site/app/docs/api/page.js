@@ -18,7 +18,7 @@ export default function Page() {
         <thead><tr><th>Route</th><th>Notes</th></tr></thead>
         <tbody>
           <tr><td><code>/p/&lt;project&gt;/&lt;provider&gt;/…</code></td><td>Proxy a call, grouped under a project</td></tr>
-          <tr><td><code>/k/&lt;key&gt;/&lt;provider&gt;/…</code></td><td>Proxy under auth — the key sets the project</td></tr>
+          <tr><td><code>/k/&lt;key&gt;/&lt;provider&gt;/…</code></td><td>Proxy under auth - the key sets the project</td></tr>
           <tr><td><code>/&lt;provider&gt;/…</code></td><td>Proxy with <code>x-aicc-project</code> header (or “default”)</td></tr>
         </tbody>
       </table>
@@ -33,7 +33,7 @@ export default function Page() {
           <tr><td><code>GET /api/requests?limit=100&amp;errorsOnly=1&amp;q=gpt</code></td><td>recent requests (newest first)</td></tr>
           <tr><td><code>GET /api/projects</code></td><td>known projects with totals</td></tr>
           <tr><td><code>GET /api/fx</code></td><td>current display currency + exchange rates</td></tr>
-          <tr><td><code>GET /api/events</code></td><td>Server-Sent Events — live request feed</td></tr>
+          <tr><td><code>GET /api/events</code></td><td>Server-Sent Events - live request feed</td></tr>
           <tr><td><code>POST /api/track</code></td><td>ingest external usage (see below)</td></tr>
           <tr><td><code>DELETE /api/records?simulated=1</code></td><td>remove demo records (admin; drop the query to wipe all)</td></tr>
         </tbody>

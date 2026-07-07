@@ -99,7 +99,7 @@ export default function Page() {
       <p className="lead">
         The tools below all touch “LLM cost and usage” somewhere, but most are broader observability,
         evaluation, or gateway platforms. AI Command Center deliberately does less. This lays out the
-        differences honestly so you pick the right tool — the facts were independently fact-checked.
+        differences honestly so you pick the right tool - the facts were independently fact-checked.
       </p>
 
       <div className="tablewrap" style={{ margin: '20px 0' }}>
@@ -126,23 +126,23 @@ export default function Page() {
         </table>
       </div>
 
-      <h2>Where it fits — and where it doesn&apos;t</h2>
+      <h2>Where it fits - and where it doesn&apos;t</h2>
       <p>
         AI Command Center occupies a deliberately narrow slot: a self-hosted, language-agnostic,
         zero-dependency cost and usage dashboard you can stand up with a single command. You point any
         provider SDK&apos;s base URL at the gateway, and it captures tokens, cost, latency, and errors per
         project into append-only local JSONL. There is no external database, no message queue, and no
-        analytics cluster to operate — which is the main thing that separates it from the platforms
+        analytics cluster to operate - which is the main thing that separates it from the platforms
         above. Most of them are genuinely powerful, but their self-hosted footprint is a multi-service
         stack (Postgres + ClickHouse + Redis + object storage, sometimes Kafka), and several are
         self-hostable only on their Enterprise tier or keep the analytics control plane in SaaS.
       </p>
       <p>
         Two design choices define the niche. First, it is an <strong>inline gateway</strong>, so capture is
-        automatic and works from any language over HTTP — no vendor SDK, no per-language instrumentation,
+        automatic and works from any language over HTTP - no vendor SDK, no per-language instrumentation,
         no OpenTelemetry setup. That is also a real tradeoff: a proxy in the request path adds a latency
         and availability consideration that out-of-band telemetry tools don&apos;t. Second, it{' '}
-        <strong>stores no prompt or response bodies</strong> — only metadata. Several of the platforms store
+        <strong>stores no prompt or response bodies</strong> - only metadata. Several of the platforms store
         full request/response content by default (redaction is opt-in, sometimes paid). If storing no
         message content by default matters for your privacy or compliance posture, that is a real
         difference.
@@ -157,7 +157,7 @@ export default function Page() {
       <h2>When to choose something else</h2>
       <ul>
         <li>Need full traces, evals, datasets, or prompt versioning → <strong>Langfuse, Helicone, LangSmith, Lunary, OpenLLMetry/Traceloop</strong>.</li>
-        <li>The gateway itself is the point — unify many providers with routing, fallbacks, retries, caching → <strong>LiteLLM</strong> or <strong>Portkey</strong>.</li>
+        <li>The gateway itself is the point - unify many providers with routing, fallbacks, retries, caching → <strong>LiteLLM</strong> or <strong>Portkey</strong>.</li>
         <li>Turn token usage into customer-facing metering and invoicing → <strong>OpenMeter</strong>.</li>
         <li>Want a managed, hosted service with no infrastructure to run → most of the above offer SaaS; this project does not.</li>
       </ul>
@@ -167,11 +167,11 @@ export default function Page() {
         body-free cost and usage visibility across many AI projects with zero infrastructure.
         <br />
         <strong>Not for:</strong> teams needing full tracing, evaluations, prompt management, provider
-        routing/failover, or a managed SaaS at scale — pick one of the platforms above.
+        routing/failover, or a managed SaaS at scale - pick one of the platforms above.
       </div>
 
       <p style={{ color: 'var(--muted)', fontSize: 14 }}>
-        Vendor status and licensing are as of mid-2026 and may change — several of these projects
+        Vendor status and licensing are as of mid-2026 and may change - several of these projects
         recently changed hands. Verify current details on each project&apos;s site before deciding.
         The full research (with sources) is in the repo. See also the{' '}
         <Link href="/docs/faq">FAQ</Link>.

@@ -28,7 +28,7 @@ packages/gateway/        the npm package `ai-command-center`
   src/cors.js            origin policy
   src/config.js          layered config + presets
   public/                the dashboard (index.html, app.js, style.css)
-  presets/               config presets (e.g. medikabazaar.json)
+  presets/               config presets (e.g. example.json)
   test/                  node:test suite + mock upstream
 evals/                   reproducible overhead/cost/parser benchmarks
 packages/sdk-python, packages/sdk-js   optional thin helpers
@@ -37,13 +37,13 @@ site/                    the Next.js marketing + docs website
 docs/                    comparison, demo script
 ```
 
-## Working in this repo — rules
+## Working in this repo - rules
 
 - **No runtime dependencies.** The gateway must stay pure Node (ESM, Node ≥ 18.17).
   The dashboard vendors Chart.js and nothing else. Do not add npm runtime deps.
 - **Every change ships with a test.** Run `npm test` (mock upstreams, no keys).
   For proxy/pricing changes also run `npm run evals`.
-- **Never store prompt/response bodies.** The proxy logs metadata only — keep it that way.
+- **Never store prompt/response bodies.** The proxy logs metadata only - keep it that way.
 - **Prices drift.** If you touch `pricing/pricing.json`, cite the provider price page.
 - **Keep docs truthful.** Update the README, `site/`, and `docs/comparison.md` when behavior changes.
 
@@ -60,7 +60,7 @@ cd site && npm run dev                     # the website
 ## Integrating a project with the gateway (for agents writing app code)
 
 The gateway is an HTTP proxy. To route an app through it, set the provider SDK's
-base URL — do **not** change how the app calls the model otherwise, and never
+base URL - do **not** change how the app calls the model otherwise, and never
 move the user's API key.
 
 - OpenAI-compatible: base URL `http://<gateway>/p/<project>/openai/v1`

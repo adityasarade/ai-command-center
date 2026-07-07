@@ -1,4 +1,4 @@
-# AI Command Center — gateway
+# AI Command Center - gateway
 
 > This is a running AI Command Center gateway: a transparent LLM proxy + usage/cost
 > dashboard. Route your app's LLM calls through it by pointing the provider SDK's
@@ -17,4 +17,4 @@ Integrate (replace the origin with this gateway's origin):
 
 HTTP API (JSON): GET /health, /api/meta, /api/stats?range=7d, /api/requests, /api/projects, /api/fx, /api/events (SSE); POST /api/track.
 
-Docs & source: https://github.com/adityasarade/ai-command-center — MIT.
+Docs & source: https://github.com/adityasarade/ai-command-center - MIT.

@@ -1,4 +1,4 @@
-/** CommonJS build of @ai-command-center/sdk — see index.mjs for docs. */
+/** CommonJS build of @ai-command-center/sdk - see index.mjs for docs. */
 'use strict';
 
 const DEFAULT_GATEWAY = 'http://localhost:4321';
@@ -27,7 +27,7 @@ function init({ project = 'default', key, gateway, check = true } = {}) {
   if (check) {
     fetch(`${gw}/health`, { signal: AbortSignal.timeout(1500) }).catch(() => {
       console.error(
-        `[aicc] warning: no AI Command Center gateway at ${gw} — ` +
+        `[aicc] warning: no AI Command Center gateway at ${gw} - ` +
           `calls will fail until you run: npx ai-command-center start`,
       );
     });

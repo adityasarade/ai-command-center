@@ -61,7 +61,7 @@ docker run -p 4321:4321 -v aicc-data:/data aicc`} />
 
       <h2>Company build</h2>
       <p>Run the same binary with a preset for branding + defaults, and keep secrets in your own config file:</p>
-      <CodeBlock lang="bash" code={`aicc start --preset medikabazaar --config /etc/aicc/prod.json`} />
+      <CodeBlock lang="bash" code={`aicc start --preset example --config /etc/aicc/prod.json`} />
 
       <DocFoot />
     </>

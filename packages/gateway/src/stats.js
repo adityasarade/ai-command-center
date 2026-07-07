@@ -15,7 +15,7 @@ export function resolveRange(query, records) {
   }
   const range = query.range || '7d';
   if (range === 'all') {
-    // records are not guaranteed sorted (live appends + backfills) — take the true minimum
+    // records are not guaranteed sorted (live appends + backfills) - take the true minimum
     const first = records.length
       ? records.reduce((min, r) => Math.min(min, r.ts), Infinity)
       : now - RANGES['7d'];

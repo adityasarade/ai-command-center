@@ -3,7 +3,7 @@
 > A dependency-free LLM gateway and self-hosted usage & cost dashboard. Point any
 > project at it (any language, one command) and it captures tokens, cost, latency,
 > and errors per project. Provider API keys pass through untouched; prompt and
-> response bodies are never stored — metadata only.
+> response bodies are never stored - metadata only.
 
 Install and run:
 - `npx ai-command-center` starts the gateway + dashboard at http://localhost:4321
@@ -15,7 +15,7 @@ Integrate (change a base URL, keep your API key):
 - Anthropic: `http://localhost:4321/p/<project>/anthropic`
 - Gemini: `http://localhost:4321/p/<project>/gemini`
 - Also: openrouter, mistral, deepseek, xai, groq, together, ollama, and custom OpenAI-compatible endpoints
-- Or set the SDK's standard env var (OPENAI_BASE_URL / ANTHROPIC_BASE_URL / GOOGLE_GEMINI_BASE_URL) — zero code change
+- Or set the SDK's standard env var (OPENAI_BASE_URL / ANTHROPIC_BASE_URL / GOOGLE_GEMINI_BASE_URL) - zero code change
 - Group calls by project via the `/p/<project>/` path segment or an `x-aicc-project` header
 - With auth enabled the path becomes `/k/<gateway-key>/…` (the key authenticates and sets the project)
 - Report usage the proxy can't see with `POST /api/track` (JSON: project, provider, model, tokensIn, tokensOut)

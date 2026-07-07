@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AI Command Center — plain curl integration (works from any language/tool).
+# AI Command Center - plain curl integration (works from any language/tool).
 # Run the gateway first:  npx ai-command-center start
 set -euo pipefail
 
