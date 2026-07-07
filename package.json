@@ -1,0 +1,15 @@
+{
+  "name": "ai-command-center-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI Command Center — plug-and-play LLM gateway + consolidated usage/cost dashboard for all your AI projects, in any language.",
+  "workspaces": [
+    "packages/gateway",
+    "packages/sdk-js"
+  ],
+  "scripts": {
+    "start": "node packages/gateway/bin/aicc.js start",
+    "demo": "node packages/gateway/bin/aicc.js demo",
+    "test": "node --test \"packages/gateway/test/*.test.js\""
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "ai-command-center",
+  "version": "0.1.0",
+  "description": "Plug-and-play LLM gateway + consolidated usage & cost dashboard for every AI project you run — any language, one dashboard.",
+  "type": "module",
+  "bin": {
+    "ai-command-center": "bin/aicc.js",
+    "aicc": "bin/aicc.js"
+  },
+  "main": "src/server.js",
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "pricing"
+  ],
+  "scripts": {
+    "start": "node bin/aicc.js start",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "keywords": [
+    "llm",
+    "openai",
+    "anthropic",
+    "gemini",
+    "gateway",
+    "proxy",
+    "cost-tracking",
+    "observability",
+    "dashboard",
+    "ai-ops"
+  ],
+  "license": "MIT"
+}
