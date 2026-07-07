@@ -108,6 +108,27 @@ const PROJECTS = [
   },
 ];
 
+// Prompt templates per project. Most calls run the current (first) version; a
+// slice runs an older version, so the Prompts view shows a version to compare.
+const PROMPTS = {
+  'claims-copilot': [
+    { name: 'claim-triage', versions: ['v3', 'v2'] },
+    { name: 'summarize-claim', versions: ['v1'] },
+  ],
+  'invoice-extraction': [
+    { name: 'extract-lineitems', versions: ['v4', 'v3'] },
+    { name: 'classify-vendor', versions: ['v2'] },
+  ],
+  'support-chatbot': [
+    { name: 'answer-query', versions: ['v7', 'v6'] },
+    { name: 'intent-router', versions: ['v2'] },
+  ],
+  'catalog-enrichment': [
+    { name: 'enrich-product', versions: ['v2'] },
+    { name: 'normalize-attrs', versions: ['v1'] },
+  ],
+};
+
 export function generateDemoRecords(pricing, { days = 14, now = Date.now(), seed = 42 } = {}) {
   const rand = mulberry32(seed);
   const records = [];
@@ -136,12 +157,17 @@ export function generateDemoRecords(pricing, { days = 14, now = Date.now(), seed
 
     for (const project of PROJECTS) {
       const count = Math.round(project.perDay * weekdayFactor * (0.8 + rand() * 0.5));
+      const projectPrompts = PROMPTS[project.name] || [];
+      // Rolling "open" trace so groups of calls share a session id and cluster in time.
+      let openTrace = null;
+      let openCount = 0;
+      let openAnchor = 0;
       for (let i = 0; i < count; i++) {
         const hour = pick(
           Array.from({ length: 24 }, (_, h) => h),
           HOUR_WEIGHTS,
         );
-        const ts = dayStart.getTime() + hour * 3600e3 + Math.floor(rand() * 3600e3);
+        let ts = dayStart.getTime() + hour * 3600e3 + Math.floor(rand() * 3600e3);
         if (ts > now) continue;
 
         let mix = pick(
@@ -151,9 +177,9 @@ export function generateDemoRecords(pricing, { days = 14, now = Date.now(), seed
         let provider = mix.provider;
         let model = mix.model;
 
-        // Incident: a few days ago claims-copilot ran Opus between 10:00-16:00 (config slip).
-        const isSpike =
-          project.name === 'claims-copilot' && d === spikeD && hour >= 10 && hour < 16;
+        // Incident: a few days ago claims-copilot ran on Opus all business day
+        // (a config slip) - a clear cost spike to catch.
+        const isSpike = project.name === 'claims-copilot' && d === spikeD && hour >= 8 && hour < 20;
         if (isSpike) {
           provider = 'anthropic';
           model = 'claude-opus-4-5';
@@ -194,6 +220,35 @@ export function generateDemoRecords(pricing, { days = 14, now = Date.now(), seed
           ({ costUsd, priced } = pricing.cost(provider, model, usage));
         }
 
+        // Prompt template + version (skip embeddings).
+        let prompt = null;
+        let promptVersion = null;
+        if (!mix.embedding && projectPrompts.length) {
+          const tmpl = pick(
+            projectPrompts,
+            projectPrompts.map((_, idx) => (idx === 0 ? 3 : 1)),
+          );
+          prompt = tmpl.name;
+          promptVersion =
+            tmpl.versions.length > 1 && rand() < 0.18 ? tmpl.versions[1] : tmpl.versions[0];
+        }
+
+        // Session/trace grouping: ~45% of calls belong to a multi-call session.
+        let trace = null;
+        if (openTrace && openCount < 4 && rand() < 0.6) {
+          trace = openTrace;
+          ts = openAnchor + openCount * (2000 + Math.floor(rand() * 9000));
+          openCount += 1;
+        } else if (rand() < 0.45) {
+          openTrace = 'tr_' + crypto.randomUUID().replaceAll('-', '').slice(0, 16);
+          openAnchor = ts;
+          openCount = 1;
+          trace = openTrace;
+        } else {
+          openTrace = null;
+          openCount = 0;
+        }
+
         records.push({
           id: 'demo_' + crypto.randomUUID().replaceAll('-', '').slice(0, 18),
           ts,
@@ -209,6 +264,9 @@ export function generateDemoRecords(pricing, { days = 14, now = Date.now(), seed
                 : '/v1/chat/completions',
           method: 'POST',
           stream,
+          trace,
+          prompt,
+          promptVersion,
           status: failed ? (isErrorBurst ? 429 : pick([500, 502, 400], [2, 1, 1])) : 200,
           ok: !failed,
           latencyMs,

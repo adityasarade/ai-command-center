@@ -215,3 +215,200 @@ export function listProjects(allRecords) {
   }
   return [...map.values()].sort((a, b) => b.lastTs - a.lastTs);
 }
+
+/** Total spend per project for the current calendar month (host-local). */
+export function monthlySpendByProject(records, now = Date.now()) {
+  const d = new Date(now);
+  const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  const byProject = {};
+  for (const r of records) {
+    if (r.ts < monthStart) continue;
+    const p = r.project || 'default';
+    byProject[p] = (byProject[p] || 0) + (r.costUsd || 0);
+  }
+  return { monthStart, byProject };
+}
+
+/** Group calls into traces/sessions (via the trace id). Newest first. */
+export function listTraces(records, query = {}) {
+  const { from, to } = resolveRange(query, records);
+  const rows = filterRecords(records, { from, to, project: query.project });
+  const map = new Map();
+  for (const r of rows) {
+    if (!r.trace) continue;
+    let t = map.get(r.trace);
+    if (!t) {
+      t = {
+        id: r.trace,
+        project: r.project,
+        calls: 0,
+        costUsd: 0,
+        tokens: 0,
+        errors: 0,
+        start: r.ts,
+        end: r.ts,
+        providers: new Set(),
+        models: new Set(),
+      };
+      map.set(r.trace, t);
+    }
+    t.calls += 1;
+    t.costUsd += r.costUsd || 0;
+    t.tokens += r.tokensTotal || 0;
+    if (!r.ok) t.errors += 1;
+    t.start = Math.min(t.start, r.ts);
+    t.end = Math.max(t.end, r.ts + (r.latencyMs || 0));
+    t.providers.add(r.provider);
+    if (r.model) t.models.add(r.model);
+  }
+  const items = [...map.values()]
+    .map((t) => ({
+      id: t.id,
+      project: t.project,
+      calls: t.calls,
+      costUsd: t.costUsd,
+      tokens: t.tokens,
+      errors: t.errors,
+      start: t.start,
+      spanMs: t.end - t.start,
+      providers: [...t.providers],
+      models: [...t.models],
+    }))
+    .sort((a, b) => b.start - a.start);
+  const limit = Math.min(Number(query.limit) || 50, 300);
+  return { total: items.length, items: items.slice(0, limit) };
+}
+
+/** The ordered call timeline for one trace id. */
+export function getTrace(records, id) {
+  const calls = records.filter((r) => r.trace === id).sort((a, b) => a.ts - b.ts);
+  const start = calls.length ? calls[0].ts : 0;
+  const last = calls.at(-1);
+  return {
+    id,
+    project: calls[0]?.project ?? null,
+    calls: calls.map((r) => ({
+      id: r.id,
+      ts: r.ts,
+      offsetMs: r.ts - start,
+      provider: r.provider,
+      model: r.model,
+      endpoint: r.endpoint,
+      prompt: r.prompt || null,
+      promptVersion: r.promptVersion || null,
+      tokensIn: r.tokensIn,
+      tokensOut: r.tokensOut,
+      costUsd: r.costUsd,
+      latencyMs: r.latencyMs,
+      ok: r.ok,
+      status: r.status,
+    })),
+    costUsd: calls.reduce((s, r) => s + (r.costUsd || 0), 0),
+    tokens: calls.reduce((s, r) => s + (r.tokensTotal || 0), 0),
+    spanMs: last ? last.ts + (last.latencyMs || 0) - start : 0,
+  };
+}
+
+/** Per prompt+version metrics, so a regressed version is easy to spot. */
+export function listPrompts(records, query = {}) {
+  const { from, to } = resolveRange(query, records);
+  const rows = filterRecords(records, { from, to, project: query.project });
+  const map = new Map();
+  for (const r of rows) {
+    if (!r.prompt) continue;
+    const key = r.prompt + ' ' + (r.promptVersion || '-');
+    let p = map.get(key);
+    if (!p) {
+      p = {
+        prompt: r.prompt,
+        version: r.promptVersion || null,
+        project: r.project,
+        requests: 0,
+        errors: 0,
+        costUsd: 0,
+        tokensIn: 0,
+        tokensOut: 0,
+        lat: [],
+      };
+      map.set(key, p);
+    }
+    p.requests += 1;
+    if (!r.ok) p.errors += 1;
+    p.costUsd += r.costUsd || 0;
+    p.tokensIn += r.tokensIn || 0;
+    p.tokensOut += r.tokensOut || 0;
+    if (r.ok && r.latencyMs != null) p.lat.push(r.latencyMs);
+  }
+  const items = [...map.values()]
+    .map((p) => {
+      p.lat.sort((a, b) => a - b);
+      return {
+        prompt: p.prompt,
+        version: p.version,
+        project: p.project,
+        requests: p.requests,
+        errorRate: p.requests ? p.errors / p.requests : 0,
+        costUsd: p.costUsd,
+        avgCostUsd: p.requests ? p.costUsd / p.requests : 0,
+        tokens: p.tokensIn + p.tokensOut,
+        p50LatencyMs: Math.round(percentile(p.lat, 50)),
+        p95LatencyMs: Math.round(percentile(p.lat, 95)),
+      };
+    })
+    .sort(
+      (a, b) =>
+        a.prompt.localeCompare(b.prompt) || (b.version || '').localeCompare(a.version || ''),
+    );
+  return { items };
+}
+
+/** Side-by-side model comparison: effective $/1M tokens, latency, error rate. */
+export function modelComparison(records, query = {}) {
+  const { from, to } = resolveRange(query, records);
+  const rows = filterRecords(records, { from, to, project: query.project });
+  const map = new Map();
+  for (const r of rows) {
+    const model = r.model || '(unknown)';
+    const key = r.provider + ' ' + model;
+    let m = map.get(key);
+    if (!m) {
+      m = {
+        provider: r.provider,
+        model,
+        requests: 0,
+        errors: 0,
+        costUsd: 0,
+        tokensIn: 0,
+        tokensOut: 0,
+        lat: [],
+      };
+      map.set(key, m);
+    }
+    m.requests += 1;
+    if (!r.ok) m.errors += 1;
+    m.costUsd += r.costUsd || 0;
+    m.tokensIn += r.tokensIn || 0;
+    m.tokensOut += r.tokensOut || 0;
+    if (r.ok && r.latencyMs != null) m.lat.push(r.latencyMs);
+  }
+  const items = [...map.values()]
+    .map((m) => {
+      m.lat.sort((a, b) => a - b);
+      const tokens = m.tokensIn + m.tokensOut;
+      return {
+        provider: m.provider,
+        model: m.model,
+        requests: m.requests,
+        errorRate: m.requests ? m.errors / m.requests : 0,
+        costUsd: m.costUsd,
+        tokensIn: m.tokensIn,
+        tokensOut: m.tokensOut,
+        tokens,
+        effectivePerMTok: tokens ? (m.costUsd / tokens) * 1e6 : 0,
+        p50LatencyMs: Math.round(percentile(m.lat, 50)),
+        p95LatencyMs: Math.round(percentile(m.lat, 95)),
+      };
+    })
+    .sort((a, b) => b.costUsd - a.costUsd);
+  return { items };
+}

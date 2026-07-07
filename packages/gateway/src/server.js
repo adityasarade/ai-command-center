@@ -9,7 +9,18 @@ import { Store } from './store.js';
 import { FxService } from './fx.js';
 import { AuthService } from './auth.js';
 import { corsHeaders, originAllowed, untrustedCrossOrigin } from './cors.js';
-import { computeStats, listRequests, listProjects } from './stats.js';
+import {
+  computeStats,
+  listRequests,
+  listProjects,
+  listTraces,
+  getTrace,
+  listPrompts,
+  modelComparison,
+  monthlySpendByProject,
+} from './stats.js';
+import { Budgets } from './budgets.js';
+import { detectAnomalies, computeAlerts } from './anomaly.js';
 import { createProxyHandler, readBody, respondJson } from './proxy.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,9 +44,35 @@ export function createGateway(config) {
   const fx = new FxService(config.dataDir, config.currency);
   fx.init().catch(() => {}); // non-blocking; get() falls back gracefully meanwhile
   const auth = new AuthService(config.dataDir, { disabled: config.auth === false });
+  const budgets = new Budgets(config.dataDir);
   const proxy = createProxyHandler({ table, config, pricing, store });
   const sseClients = new Set();
   const startedAt = Date.now();
+
+  // Optional alert webhook: POST newly-fired alerts (deduped) to config.alertWebhook.
+  const firedAlerts = new Set();
+  let alertTimer = null;
+  if (config.alertWebhook) {
+    const checkAlerts = async () => {
+      try {
+        const alerts = computeAlerts(store.records, budgets.all());
+        const fresh = alerts.filter((a) => !firedAlerts.has(alertKey(a)));
+        for (const a of alerts) firedAlerts.add(alertKey(a));
+        if (fresh.length) {
+          await fetch(config.alertWebhook, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ source: 'ai-command-center', alerts: fresh }),
+            signal: AbortSignal.timeout(5000),
+          }).catch(() => {});
+        }
+      } catch {
+        /* best effort */
+      }
+    };
+    alertTimer = setInterval(checkAlerts, 60_000);
+    alertTimer.unref();
+  }
 
   store.on('record', (record) => {
     for (const client of sseClients) {
@@ -157,6 +194,45 @@ export function createGateway(config) {
         if (pathname === '/api/projects') {
           return respondJson(res, 200, listProjects(visible));
         }
+        if (pathname === '/api/traces') {
+          return respondJson(res, 200, listTraces(visible, queryObj(url)));
+        }
+        if (pathname === '/api/trace') {
+          const id = url.searchParams.get('id');
+          if (!id) return respondJson(res, 400, { error: { message: 'id required' } });
+          return respondJson(res, 200, getTrace(visible, id));
+        }
+        if (pathname === '/api/prompts') {
+          return respondJson(res, 200, listPrompts(visible, queryObj(url)));
+        }
+        if (pathname === '/api/models') {
+          return respondJson(res, 200, modelComparison(visible, queryObj(url)));
+        }
+        if (pathname === '/api/anomalies') {
+          return respondJson(res, 200, detectAnomalies(visible, queryObj(url)));
+        }
+        if (pathname === '/api/alerts') {
+          const { monthStart, byProject } = monthlySpendByProject(visible);
+          const bdb = budgets.all();
+          const budgetRows = Object.entries(bdb.projects)
+            .filter(([p]) => allowed == null || allowed.has(p))
+            .map(([project, b]) => {
+              const spent = byProject[project] || 0;
+              return {
+                project,
+                monthlyUsd: b.monthlyUsd,
+                alertAtPct: b.alertAtPct,
+                spentUsd: spent,
+                pct: b.monthlyUsd > 0 ? (spent / b.monthlyUsd) * 100 : 0,
+              };
+            });
+          return respondJson(res, 200, {
+            alerts: computeAlerts(visible, bdb),
+            budgets: budgetRows,
+            thresholds: bdb.thresholds,
+            monthStart,
+          });
+        }
         if (pathname === '/api/events') {
           res.writeHead(200, {
             'content-type': 'text/event-stream',
@@ -210,7 +286,7 @@ export function createGateway(config) {
         }
         if (pathname.startsWith('/api/admin/')) {
           if (!isAdmin) return respondJson(res, 403, { error: { message: 'admin only' } });
-          return await handleAdminRoutes(req, res, pathname, { auth, store });
+          return await handleAdminRoutes(req, res, pathname, { auth, store, budgets });
         }
         return respondJson(res, 404, { error: { message: `no API route for ${pathname}` } });
       }
@@ -267,9 +343,16 @@ export function createGateway(config) {
   server.requestTimeout = 0;
   server.headersTimeout = 60_000;
 
-  server.once('close', () => fx.stop());
+  server.once('close', () => {
+    fx.stop();
+    if (alertTimer) clearInterval(alertTimer);
+  });
 
-  return { server, store, table, pricing, fx, auth, config, sseClients };
+  return { server, store, table, pricing, fx, auth, budgets, config, sseClients };
+}
+
+function alertKey(a) {
+  return `${a.type}:${a.project || ''}:${a.severity}`;
 }
 
 // ---------------------------------------------------------------- auth routes
@@ -314,8 +397,26 @@ async function handleAuthRoutes(req, res, pathname, { auth, config }) {
 }
 
 // --------------------------------------------------------------- admin routes
-async function handleAdminRoutes(req, res, pathname, { auth, store }) {
+async function handleAdminRoutes(req, res, pathname, { auth, store, budgets }) {
   const seg = pathname.slice('/api/admin/'.length).split('/').map(decodeURIComponent);
+
+  if (seg[0] === 'budget' && req.method === 'POST' && seg.length === 1) {
+    const body = await jsonBody(req);
+    return respondJson(res, 200, {
+      budget: budgets.setProjectBudget(body.project, {
+        monthlyUsd: body.monthlyUsd,
+        alertAtPct: body.alertAtPct,
+      }),
+    });
+  }
+  if (seg[0] === 'budget' && req.method === 'DELETE' && seg.length === 2) {
+    budgets.removeProjectBudget(seg[1]);
+    return respondJson(res, 200, { ok: true });
+  }
+  if (seg[0] === 'thresholds' && req.method === 'PATCH' && seg.length === 1) {
+    const body = await jsonBody(req);
+    return respondJson(res, 200, { thresholds: budgets.setThresholds(body) });
+  }
 
   if (pathname === '/api/admin/overview' && req.method === 'GET') {
     const teamName = (id) => auth.db.teams.find((t) => t.id === id)?.name ?? null;
@@ -404,6 +505,9 @@ async function handleTrack(req, res, { store, pricing, forcedProject = null }) {
         endpoint: item.endpoint ? String(item.endpoint) : '/api/track',
         method: 'TRACK',
         stream: false,
+        trace: item.trace ? String(item.trace).slice(0, 80) : null,
+        prompt: item.prompt ? String(item.prompt).slice(0, 120) : null,
+        promptVersion: item.promptVersion ? String(item.promptVersion).slice(0, 40) : null,
         status: item.ok === false ? 0 : 200,
         ok: item.ok !== false,
         latencyMs: numOrNull(item.latencyMs),

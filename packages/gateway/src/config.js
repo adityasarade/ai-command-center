@@ -23,6 +23,8 @@ const DEFAULTS = {
   // that talks to the proxy from the browser). Same-origin + non-browser
   // callers never need this. '*' allows any origin (not recommended).
   allowedOrigins: [],
+  // Optional URL that receives a POST with newly-fired alerts (budget/error/latency).
+  alertWebhook: null,
   // Central provider keys (optional). Pass-through of the caller's own key always wins.
   // e.g. { "openai": "sk-...", "anthropic": "sk-ant-..." }
   keys: {},

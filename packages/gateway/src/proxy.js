@@ -39,6 +39,10 @@ export function createProxyHandler({ table, config, pricing, store }) {
   return async function handleProxy(req, res, route, url) {
     const provider = table[route.providerId];
     const project = route.project || headerValue(req, 'x-aicc-project') || 'default';
+    // Optional grouping metadata from x-aicc-* headers (stripped before upstream).
+    const trace = clip(headerValue(req, 'x-aicc-trace') || headerValue(req, 'x-aicc-session'), 80);
+    const prompt = clip(headerValue(req, 'x-aicc-prompt'), 120);
+    const promptVersion = clip(headerValue(req, 'x-aicc-prompt-version'), 40);
     const startedAt = Date.now();
     const t0 = performance.now();
 
@@ -128,6 +132,9 @@ export function createProxyHandler({ table, config, pricing, store }) {
       endpoint: route.rest,
       method: req.method,
       stream: !!isStreamRequest,
+      trace: trace || null,
+      prompt: prompt || null,
+      promptVersion: promptVersion || null,
     };
 
     // ---- call upstream -----------------------------------------------------
@@ -411,6 +418,10 @@ function extractErrorMessage(text) {
 function headerValue(req, name) {
   const v = req.headers[name];
   return Array.isArray(v) ? v[0] : v;
+}
+
+function clip(v, max) {
+  return v == null ? null : String(v).slice(0, max);
 }
 
 export function readBody(req, limit) {
