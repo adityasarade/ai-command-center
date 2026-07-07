@@ -4,3 +4,7 @@ AI Command Center SS/
 __pycache__/
 Docs/
 .DS_Store
+node_modules/
+*.egg-info/
+dist/
+aicc.config.json
