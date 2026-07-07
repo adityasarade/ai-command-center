@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 660" font-family="ui-monospace, 'SF Mono', Menlo, monospace" role="img" aria-label="AI Command Center dashboard: total spend, requests, tokens, latency, spend over time, and spend by project">
+  <defs>
+    <style>
+      .lbl { fill:#898781; font-size:10px; letter-spacing:1.4px; }
+      .val { fill:#ffffff; font-size:24px; font-weight:600; }
+      .accent { fill:#3987e5; }
+      .sub { fill:#898781; font-size:11px; }
+      .card { fill:#1a1a19; stroke:rgba(255,255,255,0.09); }
+      .hd { fill:#c3c2b7; font-size:11px; letter-spacing:1.4px; }
+    </style>
+  </defs>
+
+  <!-- page -->
+  <rect width="1200" height="660" fill="#0d0d0d"/>
+  <!-- top bar -->
+  <rect x="0" y="0" width="1200" height="56" fill="#0f0f0f"/>
+  <line x1="0" y1="56" x2="1200" y2="56" stroke="rgba(255,255,255,0.09)"/>
+  <path d="M40 20 52 30 40 40 28 30Z" fill="none" stroke="#3987e5" stroke-width="2.2"/>
+  <circle cx="40" cy="30" r="3" fill="#0ca30c"/>
+  <text x="66" y="34" fill="#ffffff" font-size="13" font-weight="700" letter-spacing="2.5">AI COMMAND CENTER</text>
+  <text x="270" y="34" class="sub">v0.1.0</text>
+  <!-- currency + range segs -->
+  <rect x="900" y="18" width="96" height="24" rx="6" fill="#1a1a19" stroke="rgba(255,255,255,0.16)"/>
+  <rect x="900" y="18" width="32" height="24" rx="6" fill="rgba(57,135,229,0.16)"/>
+  <text x="916" y="34" fill="#3987e5" font-size="11" text-anchor="middle">₹</text>
+  <text x="948" y="34" fill="#898781" font-size="11" text-anchor="middle">$</text>
+  <text x="980" y="34" fill="#898781" font-size="11" text-anchor="middle">€</text>
+  <rect x="1010" y="18" width="150" height="24" rx="6" fill="#1a1a19" stroke="rgba(255,255,255,0.16)"/>
+  <text x="1030" y="34" fill="#898781" font-size="10">24H</text>
+  <rect x="1052" y="18" width="34" height="24" rx="6" fill="rgba(57,135,229,0.16)"/>
+  <text x="1069" y="34" fill="#3987e5" font-size="10" text-anchor="middle">7D</text>
+  <text x="1104" y="34" fill="#898781" font-size="10">30D</text>
+  <text x="1138" y="34" fill="#898781" font-size="10">ALL</text>
+
+  <!-- stat tiles -->
+  <g>
+    <rect x="24" y="76" width="220" height="86" rx="10" class="card" stroke-width="1"/>
+    <rect x="24" y="76" width="220" height="86" rx="10" fill="none" stroke="rgba(57,135,229,0.4)"/>
+    <text x="40" y="100" class="lbl">TOTAL SPEND</text>
+    <text x="40" y="128" class="val accent">₹2,794.11</text>
+    <text x="40" y="150" fill="#d03b3b" font-size="11">▲ 6% </text><text x="78" y="150" class="sub">vs prev period</text>
+
+    <rect x="256" y="76" width="220" height="86" rx="10" class="card" stroke-width="1"/>
+    <text x="272" y="100" class="lbl">REQUESTS</text>
+    <text x="272" y="128" class="val">4,547</text>
+    <text x="272" y="150" fill="#d03b3b" font-size="11">73 errors (1.6%)</text>
+
+    <rect x="488" y="76" width="220" height="86" rx="10" class="card" stroke-width="1"/>
+    <text x="504" y="100" class="lbl">TOKENS</text>
+    <text x="504" y="128" class="val">22.1M</text>
+    <text x="504" y="150" class="sub">19.4M in · 2.7M out</text>
+
+    <rect x="720" y="76" width="220" height="86" rx="10" class="card" stroke-width="1"/>
+    <text x="736" y="100" class="lbl">LATENCY P50</text>
+    <text x="736" y="128" class="val">3665ms</text>
+    <text x="736" y="150" class="sub">p95 9992ms</text>
+
+    <rect x="952" y="76" width="224" height="86" rx="10" class="card" stroke-width="1"/>
+    <text x="968" y="100" class="lbl">PROJECTS</text>
+    <text x="968" y="128" class="val">4</text>
+    <text x="968" y="150" class="sub">8 models · 4 providers</text>
+  </g>
+
+  <!-- spend over time -->
+  <rect x="24" y="178" width="720" height="330" rx="10" class="card" stroke-width="1"/>
+  <text x="44" y="206" class="hd">SPEND OVER TIME</text>
+  <text x="710" y="206" class="sub" text-anchor="end">daily</text>
+  <!-- axis baseline -->
+  <line x1="88" y1="470" x2="712" y2="470" stroke="rgba(255,255,255,0.09)"/>
+  <text x="44" y="245" class="sub" font-size="9">₹763</text>
+  <text x="44" y="330" class="sub" font-size="9">₹572</text>
+  <text x="44" y="410" class="sub" font-size="9">₹191</text>
+  <!-- stacked bars (green sonnet, orange invoice, blue catalog, light-green support) -->
+  <g>
+    <!-- 30 Jun -->
+    <rect x="96" y="432" width="60" height="38" fill="#1baf7a"/>
+    <rect x="96" y="424" width="60" height="8" fill="#eda100"/>
+    <text x="126" y="488" class="sub" font-size="9" text-anchor="middle">30 Jun</text>
+    <!-- 1 Jul -->
+    <rect x="184" y="330" width="60" height="140" fill="#1baf7a"/>
+    <rect x="184" y="312" width="60" height="18" fill="#eda100"/>
+    <rect x="184" y="305" width="60" height="7" fill="#60a5fa"/>
+    <rect x="184" y="300" width="60" height="5" fill="#22c55e"/>
+    <text x="214" y="488" class="sub" font-size="9" text-anchor="middle">1 Jul</text>
+    <!-- 2 Jul -->
+    <rect x="272" y="372" width="60" height="98" fill="#1baf7a"/>
+    <rect x="272" y="356" width="60" height="16" fill="#eda100"/>
+    <rect x="272" y="349" width="60" height="7" fill="#60a5fa"/>
+    <text x="302" y="488" class="sub" font-size="9" text-anchor="middle">2 Jul</text>
+    <!-- 3 Jul (spike) -->
+    <rect x="360" y="318" width="60" height="152" fill="#1baf7a"/>
+    <rect x="360" y="296" width="60" height="22" fill="#eda100"/>
+    <rect x="360" y="289" width="60" height="7" fill="#60a5fa"/>
+    <rect x="360" y="284" width="60" height="5" fill="#22c55e"/>
+    <text x="390" y="488" class="sub" font-size="9" text-anchor="middle">3 Jul</text>
+    <!-- 4 Jul -->
+    <rect x="448" y="418" width="60" height="52" fill="#1baf7a"/>
+    <rect x="448" y="410" width="60" height="8" fill="#eda100"/>
+    <text x="478" y="488" class="sub" font-size="9" text-anchor="middle">4 Jul</text>
+    <!-- 5 Jul -->
+    <rect x="536" y="410" width="60" height="60" fill="#1baf7a"/>
+    <rect x="536" y="401" width="60" height="9" fill="#eda100"/>
+    <text x="566" y="488" class="sub" font-size="9" text-anchor="middle">5 Jul</text>
+    <!-- 6 Jul -->
+    <rect x="624" y="345" width="60" height="125" fill="#1baf7a"/>
+    <rect x="624" y="330" width="60" height="15" fill="#eda100"/>
+    <rect x="624" y="324" width="60" height="6" fill="#60a5fa"/>
+    <text x="654" y="488" class="sub" font-size="9" text-anchor="middle">6 Jul</text>
+  </g>
+  <!-- legend -->
+  <g font-size="10" fill="#c3c2b7">
+    <rect x="96" y="500" width="8" height="8" rx="2" fill="#1baf7a"/><text x="110" y="508">claims-copilot</text>
+    <rect x="210" y="500" width="8" height="8" rx="2" fill="#eda100"/><text x="224" y="508">invoice-extraction</text>
+    <rect x="350" y="500" width="8" height="8" rx="2" fill="#60a5fa"/><text x="364" y="508">catalog-enrichment</text>
+    <rect x="500" y="500" width="8" height="8" rx="2" fill="#22c55e"/><text x="514" y="508">support-chatbot</text>
+  </g>
+
+  <!-- spend by project -->
+  <rect x="756" y="178" width="420" height="330" rx="10" class="card" stroke-width="1"/>
+  <text x="776" y="206" class="hd">SPEND BY PROJECT</text>
+  <g font-size="12">
+    <text x="920" y="250" fill="#c3c2b7" text-anchor="end">claims-copilot</text>
+    <rect x="930" y="240" width="200" height="16" rx="3" fill="#1baf7a"/>
+    <text x="1140" y="252" fill="#898781" font-size="10">₹1,956</text>
+
+    <text x="920" y="298" fill="#c3c2b7" text-anchor="end">invoice-extraction</text>
+    <rect x="930" y="288" width="52" height="16" rx="3" fill="#eda100"/>
+    <text x="990" y="300" fill="#898781" font-size="10">₹472</text>
+
+    <text x="920" y="346" fill="#c3c2b7" text-anchor="end">catalog-enrichment</text>
+    <rect x="930" y="336" width="22" height="16" rx="3" fill="#60a5fa"/>
+    <text x="960" y="348" fill="#898781" font-size="10">₹190</text>
+
+    <text x="920" y="394" fill="#c3c2b7" text-anchor="end">support-chatbot</text>
+    <rect x="930" y="384" width="20" height="16" rx="3" fill="#22c55e"/>
+    <text x="958" y="396" fill="#898781" font-size="10">₹176</text>
+  </g>
+  <text x="776" y="470" class="sub" font-size="10">₹ live FX · stored in USD · no prompt bodies logged</text>
+
+  <!-- footer strip -->
+  <text x="24" y="540" class="sub">localhost:4321</text>
+  <text x="600" y="540" class="sub" text-anchor="middle">one gateway · every AI project · one dashboard</text>
+  <circle cx="1120" cy="536" r="4" fill="#0ca30c"/><text x="1132" y="540" fill="#0ca30c" font-size="11">LIVE</text>
+</svg>

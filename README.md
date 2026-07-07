@@ -1,160 +1,121 @@
+<div align="center">
+
 # ◆ AI Command Center
 
 **One gateway, every AI project, one dashboard.**
 
-Drop-in usage & cost monitoring for every project that calls an LLM — in any
-language. No code rewrite, no vendor lock-in, no per-language SDK to maintain:
-your apps keep using their official OpenAI / Anthropic / Gemini clients and
-their own API keys; they just point at the gateway, and every call lands on a
-consolidated dashboard with tokens, cost, latency, errors, and live updates.
+A dependency-free LLM gateway and self-hosted usage & cost dashboard. Point any
+project at it — any language, one command — and watch tokens, cost, latency, and
+errors for every AI product land in one place.
 
-This is the working MVP of the **AI Box** platform described in [`Docs/pitch.md`](Docs/pitch.md)
-— specifically its SDK + LLM Gateway + cost-visibility slice.
+[![License: MIT](https://img.shields.io/badge/license-MIT-3987e5.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A518.17-3fb950.svg)](package.json)
+[![runtime deps](https://img.shields.io/badge/runtime%20deps-0-21c17a.svg)](packages/gateway/package.json)
+[![npm](https://img.shields.io/npm/v/ai-command-center?color=cb3837&label=npm)](https://www.npmjs.com/package/ai-command-center)
+[![tests](https://img.shields.io/badge/tests-51%20passing-3fb950.svg)](packages/gateway/test)
 
-```
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│  Python app  │    │   Java app   │    │  Node app    │      any language,
-└──────┬───────┘    └──────┬───────┘    └──────┬───────┘      any framework
-       │ base_url          │ base_url          │ base_url
-       ▼                   ▼                   ▼
-┌─────────────────────────────────────────────────────────┐
-│           AI Command Center gateway  :4321               │
-│   pass-through proxy · token/cost capture · JSONL log    │
-│   ┌────────────────────────────────────────────────┐    │
-│   │  dashboard  ·  live feed  ·  stats API  ·  SSE  │    │
-│   └────────────────────────────────────────────────┘    │
-└──────┬──────────┬──────────┬──────────┬─────────────────┘
-       ▼          ▼          ▼          ▼
-    OpenAI    Anthropic    Gemini    OpenRouter · Mistral · DeepSeek
-                                     xAI · Groq · Together · Ollama · custom
-```
+<br/>
 
-## Quickstart (60 seconds)
+<img src="assets/dashboard.svg" alt="AI Command Center dashboard — total spend, requests, tokens, latency, spend over time stacked by project, and spend by project" width="820" />
+
+</div>
+
+---
 
 ```bash
-# 1. start the gateway + dashboard          (from this repo: npm start)
-npx ai-command-center
-
-# 2. point any project at it — env var only, zero code changes
-export OPENAI_BASE_URL="http://localhost:4321/p/my-app/openai/v1"
-python your_app.py        # or java -jar app.jar, node app.js, …
-
-# 3. watch http://localhost:4321 — every call appears live with cost
+npx ai-command-center        # gateway + dashboard at http://localhost:4321
+npx ai-command-center demo   # seed 14 days of realistic sample data to explore
 ```
 
-No traffic yet? Seed a realistic 14-day, 4-project sample to explore the
-dashboard (`removable anytime with npx ai-command-center clear`):
+Then point any project at it — the only change is a base URL, and your API key
+never moves:
 
-```bash
-npx ai-command-center demo
+```python
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:4321/p/invoice-bot/openai/v1")
 ```
 
-> Running from this repo instead of npm: `node packages/gateway/bin/aicc.js start`
+That's the whole integration. **Full docs & a live interactive demo:
+[ai-command-center.dev](https://ai-command-center.dev)**
 
-## How integration works
+This is the working implementation of the **AI Box** platform sketched in
+[`Docs/pitch.md`](Docs/pitch.md) — its SDK + LLM Gateway + cost-visibility slice,
+built to actually run.
 
-The gateway is a **transparent proxy**. Your app's provider SDK already
-supports a custom base URL (every official SDK does), so integration is one
-line — or zero lines, via environment variables. API keys are **pass-through**:
-they stay in your app and are forwarded to the provider unchanged.
+## Why
 
-The project name in the URL path (`/p/<project>/…`) — or an `x-aicc-project`
-header — is how calls are grouped on the dashboard.
+Most teams either fly blind on LLM spend or stand up a multi-service
+observability stack (Postgres + ClickHouse + Redis + object storage). This is the
+middle path: the numbers you actually need, from one command, on your own
+machine, with **zero runtime dependencies**.
+
+- **One line to onboard** — change a base URL (or one env var). No new library, no per-language SDK, no OpenTelemetry setup.
+- **Any language** — it's an HTTP gateway. Python, JS, Java, Go, Rust, shell — identical.
+- **Every provider** — OpenAI, Anthropic, Gemini, OpenRouter, Mistral, DeepSeek, xAI, Groq, Together, Ollama, and any OpenAI-compatible endpoint.
+- **Cost you can trust** — exact per-request USD from real token counts (incl. cached tokens), shown in ₹ / $ / € with live rates.
+- **Your keys, your data** — provider keys pass straight through; **prompt and response bodies are never stored** (metadata only); telemetry stays on your machine.
+- **Team-ready** — optional login, teams, and per-project gateway keys, so members see only their team's projects.
+
+## Integrate (any language)
+
+The gateway is a transparent proxy. Every SDK supports a custom base URL, so
+integration is one line — or zero, via environment variables. The
+`/p/<project>` path segment (or an `x-aicc-project` header) groups calls on the
+dashboard.
+
+<table>
+<tr><td>
 
 **Python**
 ```python
 from openai import OpenAI
-client = OpenAI(base_url="http://localhost:4321/p/invoice-bot/openai/v1")
+client = OpenAI(base_url=
+  "http://localhost:4321/p/app/openai/v1")
 
 from anthropic import Anthropic
-client = Anthropic(base_url="http://localhost:4321/p/invoice-bot/anthropic")
+client = Anthropic(base_url=
+  "http://localhost:4321/p/app/anthropic")
 ```
 
-**JavaScript / TypeScript**
+</td><td>
+
+**JavaScript / Java / anything**
 ```js
-import OpenAI from "openai";
-const client = new OpenAI({ baseURL: "http://localhost:4321/p/support-bot/openai/v1" });
+new OpenAI({ baseURL:
+  "http://localhost:4321/p/app/openai/v1" });
 ```
-
-**Java** — see [`examples/java-demo`](examples/java-demo/README.md)
-```java
-OpenAIClient client = OpenAIOkHttpClient.builder()
-    .fromEnv().baseUrl("http://localhost:4321/p/claims-ai/openai/v1").build();
-```
-
-**Anything at all** (Go, Rust, PHP, shell, LangChain, Spring AI…) — set the env var:
 ```bash
-export OPENAI_BASE_URL="http://localhost:4321/p/my-app/openai/v1"
-export ANTHROPIC_BASE_URL="http://localhost:4321/p/my-app/anthropic"
+# zero code change — SDKs read this
+export OPENAI_BASE_URL=\
+  "http://localhost:4321/p/app/openai/v1"
 ```
 
-**Optional thin SDKs** (they only set those env vars for you):
-```python
-import aicc; aicc.init(project="invoice-bot")        # packages/sdk-python
-```
-```js
-import { init } from "@ai-command-center/sdk"; init({ project: "support-bot" });
-```
+</td></tr>
+</table>
 
-> **With login enabled** (see Access control below), the path prefix becomes the
-> project's **gateway key** instead of its name: `.../k/<gateway-key>/openai/v1`.
-> `npx ai-command-center snippets --project <name>` prints the exact URLs with the
-> key filled in.
+Print snippets for your own project: `npx ai-command-center snippets --project my-app`.
+Full per-language guide (LangChain, Spring AI, curl, …): **[docs/integrate](https://ai-command-center.dev/docs/integrate)**.
 
-## Access control (admin, teams, per-project keys)
+**Batch jobs / unsupported providers** — report usage directly and it's priced the same way:
 
-By default the gateway is **open until you create the first admin account** —
-zero friction to get started. Open the dashboard and it prompts you to create
-the admin; from that point:
-
-- **Login is required** for the dashboard and all data APIs (secure `HttpOnly`
-  session cookie; passwords hashed with scrypt — all zero-dependency).
-- **Admins** see every project and manage users, teams, and project keys under
-  **Settings**. **Members** see only the projects assigned to **their team**.
-- **The proxy requires a per-project gateway key** (`/k/<key>/…` or an
-  `x-aicc-key` header). Each project gets its own key; rotate or revoke anytime.
-
-Manage everything in the dashboard's Settings panel, or from the CLI:
-```bash
-npx ai-command-center user add --username aditya --password '…'   # first = admin
-npx ai-command-center user list
-```
-Prefer no auth (single-user localhost)? Start with `--no-auth`.
-
-## Currency
-
-Costs are stored in USD and shown in your currency of choice — **INR by
-default**, with a ₹/$/€ toggle in the top bar (your pick is remembered).
-Live exchange rates are fetched daily (frankfurter.app → open.er-api.com,
-cached locally, with a built-in fallback if offline). Pin manual rates or
-change the default/options via config:
-```jsonc
-"currency": { "default": "INR", "options": ["INR", "USD", "EUR"], "rates": null }
-```
-
-**Escape hatch** — for batch jobs or providers the proxy doesn't cover, report
-usage directly and it's priced + dashboarded the same way:
 ```bash
 curl -X POST http://localhost:4321/api/track -H "Content-Type: application/json" \
   -d '{"project":"nightly-job","provider":"openai","model":"gpt-4o","tokensIn":52000,"tokensOut":9000}'
 ```
 
-Print all snippets for your own project name: `npx ai-command-center snippets --project my-app`
+## How it compares
 
-## Supported providers
+AI Command Center occupies a deliberately narrow slot: a self-hosted,
+language-agnostic **cost/usage dashboard** that runs from one command with no
+database. It is **not** a tracing platform, an eval framework, a prompt manager,
+or a routing/failover gateway — tools like Langfuse, Helicone, LangSmith,
+LiteLLM, and Portkey do far more on those axes. If you need them, use them.
 
-| Route prefix | Upstream | Usage & cost parsing |
-|---|---|---|
-| `/openai` | api.openai.com | chat completions, responses API, embeddings — stream + non-stream, cached tokens |
-| `/anthropic` | api.anthropic.com | messages — stream + non-stream, cache read/write pricing |
-| `/gemini` | generativelanguage.googleapis.com | generateContent + streamGenerateContent, thinking tokens |
-| `/openrouter` `/mistral` `/deepseek` `/xai` `/groq` `/together` | respective APIs | OpenAI-compatible schema |
-| `/ollama` | localhost:11434 | OpenAI-compatible; priced $0 by default |
-| custom | anything OpenAI-compatible (Azure, vLLM, LiteLLM…) | add under `providers` in config |
+Reach for this when the question is simply *"how many tokens and dollars is each
+project spending, across many providers and languages, without shipping prompt
+content anywhere or running a database?"*
 
-Streaming responses are passed through **byte-for-byte** while usage is parsed
-on the side; for OpenAI-style streams the gateway quietly injects
-`stream_options: {include_usage: true}` so the final chunk carries token counts.
+Full, fact-checked comparison: **[docs/comparison](https://ai-command-center.dev/docs/comparison)**.
 
 ## CLI
 
@@ -162,111 +123,77 @@ on the side; for OpenAI-style streams the gateway quietly injects
 npx ai-command-center            # start gateway + dashboard (default)
 npx ai-command-center demo       # seed 14 days of sample data (tagged, removable)
 npx ai-command-center clear      # remove demo data (--all wipes everything)
-npx ai-command-center stats      # terminal summary (--range 30d, --json)
+npx ai-command-center stats      # terminal usage/cost summary
 npx ai-command-center snippets   # integration code for every language
+npx ai-command-center user add   # manage accounts (first user = admin)
 ```
 
-Options: `--port` (default 4321) · `--host` (0.0.0.0 to share on LAN) ·
-`--data-dir` · `--config` · `--no-open`
+Flags: `--port` · `--host 0.0.0.0` (share on LAN) · `--data-dir` · `--config` ·
+`--preset <name>` · `--no-auth`.
 
-## Configuration (all optional)
+## Configuration, auth, security
 
-`~/.ai-command-center/config.json`, `./aicc.config.json`, or `--config file.json`:
+All optional — the defaults are sensible. See the docs for the full reference:
 
-```jsonc
-{
-  "port": 4321,
-  "host": "127.0.0.1",              // 0.0.0.0 → team-shared gateway on LAN/server
-  "auth": true,                     // false = no login / no gateway keys (like --no-auth)
+- **[Configuration](https://ai-command-center.dev/docs/config)** — layered config, presets, currency, custom providers, pricing overrides.
+- **[Auth & teams](https://ai-command-center.dev/docs/auth)** — open until you create the first admin, then login + per-project gateway keys + team-scoped visibility.
+- **[Security](https://ai-command-center.dev/docs/security)** — keys pass through and are never logged; no message bodies stored; cross-origin protection so a random web page can't spend your keys or wipe telemetry.
 
-  // Browser origins allowed to call the gateway cross-origin (web apps calling
-  // the proxy from the browser). Same-origin + server-side apps never need this.
-  "allowedOrigins": [],
+## Measured, not claimed
 
-  // OPTIONAL central keys — injected only when the caller sends none
-  // (and never for untrusted cross-origin browser requests).
-  "keys": { "openai": "sk-…", "anthropic": "sk-ant-…" },
+The eval suite ([`evals/`](evals/), `npm run evals`, mock upstream — no keys, no network):
 
-  // Custom OpenAI-compatible providers (Azure OpenAI, vLLM, internal…)
-  "providers": {
-    "azure": { "upstream": "https://myorg.openai.azure.com", "kind": "openai", "authHeader": "api-key" }
-  },
+| Metric | Result |
+|---|---|
+| Added proxy latency (p50) | **< 1 ms** (negligible vs 300 ms–30 s LLM calls) |
+| Cost accuracy | **0 mismatches** across 20 provider/model/token cases |
+| Usage-parser coverage | **100%** of provider response shapes (stream + non-stream) |
+| Gateway runtime dependencies | **0** |
 
-  // Point a built-in provider somewhere else (region endpoint, test double…)
-  "upstreams": { "openai": "http://localhost:8080" },
+Latest report: [`evals/REPORT.md`](evals/REPORT.md).
 
-  // Extend/override the shipped pricing table (USD per 1M tokens,
-  // longest-prefix match; "provider:*" = provider-wide default)
-  "pricing": { "my-finetune": { "in": 1.0, "out": 4.0 } },
+## Company vs open-source build
 
-  // Secondary display currency on the dashboard
-  "currency": { "code": "INR", "perUsd": 84 }
-}
+Same MIT codebase. The company build is just a **config preset** (branding,
+defaults) loaded with `--preset` — no feature difference:
+
+```bash
+npx ai-command-center start --preset medikabazaar
 ```
 
-Environment: `AICC_PORT`, `AICC_HOST`, `AICC_DATA_DIR`, `AICC_GATEWAY` (used by SDKs/examples).
-
-## What gets stored (and where)
-
-Append-only JSONL at `~/.ai-command-center/events.jsonl` — one record per call:
-timestamp, project, provider, model, endpoint, status, latency, TTFB,
-tokens (in/out/cache-read/cache-write), computed USD cost, error info.
-**Prompt and response bodies are never stored** — only metadata — so no
-PII/PHI lands on disk. Delete the file (or `aicc clear --all`) to reset.
-
-## Dashboard & API
-
-The dashboard (`http://localhost:4321`) shows total spend / requests / tokens /
-latency percentiles with period-over-period deltas, spend over time stacked by
-project, spend by project and by model, provider split, error tracking, and a
-live request feed (SSE) with search and errors-only filter — plus demo-data
-seeding and cleanup built in.
-
-Everything it uses is a plain JSON API you can build on:
-
-```
-GET  /health                 GET  /api/stats?range=7d&project=x
-GET  /api/meta               GET  /api/requests?limit=100&errorsOnly=1&q=gpt
-GET  /api/projects           GET  /api/events            (SSE live feed)
-POST /api/track              DELETE /api/records?simulated=1
-```
+Add your own under `packages/gateway/presets/<name>.json`.
 
 ## Repo layout
 
 ```
-packages/gateway       the npm package (ai-command-center): CLI + proxy + dashboard
-packages/sdk-python    optional thin Python helper (aicc.init)
-packages/sdk-js        optional thin JS helper (@ai-command-center/sdk)
-examples/              runnable Python / Node / curl / Java integrations
-Docs/                  the AI Box vision pitch & architecture this MVP implements
+packages/gateway     the npm package: CLI + proxy + dashboard (zero runtime deps)
+packages/sdk-python  optional thin Python helper (aicc.init)
+packages/sdk-js      optional thin JS helper (@ai-command-center/sdk)
+evals/               reproducible overhead + cost-accuracy benchmarks
+examples/            runnable Python / Node / curl / Java integrations
+site/                the marketing + docs website (Next.js)
+docs/                comparison, demo script
 ```
 
 ## Development
 
 ```bash
-npm test          # 25 integration + unit tests (mock upstream providers, no keys needed)
+npm test          # 51 tests — mock upstream providers, no API keys needed
+npm run evals     # overhead + cost-accuracy report
 npm start         # run the gateway from source
+cd site && npm run dev   # the website
 ```
 
-Zero runtime dependencies (Chart.js is vendored for the dashboard). Node ≥ 18.17.
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and
+[AGENTS.md](AGENTS.md). Security reports: [SECURITY.md](SECURITY.md).
 
-## Security posture
+## Current limitations (honest)
 
-- **Cross-origin protection**: the gateway only accepts browser requests from
-  its own origin (or origins you list in `allowedOrigins`). A random web page you
-  visit cannot spend your API keys through the proxy or wipe your telemetry.
-  Server-side apps (which send no `Origin` header) are unaffected.
-- **Central keys are never handed to untrusted cross-origin callers.**
-- **No prompt/response bodies are stored** — only metadata (tokens, cost, latency).
-- For anything beyond localhost, enable auth (default) and, ideally, also put it
-  behind your VPN or a TLS-terminating reverse proxy.
-
-## Current limitations (MVP)
-
-- Pricing table ships with sane defaults but **will drift** — verify against
-  provider price pages and override via config (unpriced models are flagged, never guessed).
-- JSONL + in-memory aggregation is comfortable into the hundreds of thousands
-  of records; beyond that, the storage layer is designed to be swapped (SQLite/Postgres).
-- Auth is username/password + session cookies (no SSO/OAuth yet) and metadata is
-  not encrypted at rest — fine for an internal tool, plan hardening before external multi-tenant use.
+- Pricing ships as sane defaults but **will drift** — verify against provider price pages and override in config (unpriced models are flagged, never guessed).
+- JSONL + in-memory aggregation is comfortable into the hundreds of thousands of records; beyond that the storage layer is small and swappable (SQLite/Postgres).
+- Auth is username/password + signed cookies (no SSO yet) and telemetry isn't encrypted at rest — fine for an internal tool; review before external multi-tenant use.
 - OpenAI Realtime/WebSocket APIs aren't proxied (HTTP only).
+
+## License
+
+[MIT](LICENSE) © 2026 Aditya Sarade. Not affiliated with OpenAI, Anthropic, or Google.
