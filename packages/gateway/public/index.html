@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Command Center</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d0d0d'/%3E%3Cpath d='M16 5 27 16 16 27 5 16Z' fill='none' stroke='%233987e5' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%230ca30c'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
+      <path d="M16 4 28 16 16 28 4 16Z" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+      <circle cx="16" cy="16" r="3.2" fill="var(--status-good)"/>
+    </svg>
+    <span class="wordmark">AI Command Center</span>
+    <span class="ver" id="metaVersion"></span>
+  </div>
+  <div class="controls">
+    <div class="seg" id="rangeSeg" role="tablist" aria-label="Time range">
+      <button data-range="24h" role="tab">24H</button>
+      <button data-range="7d" class="on" role="tab">7D</button>
+      <button data-range="30d" role="tab">30D</button>
+      <button data-range="all" role="tab">ALL</button>
+    </div>
+    <select id="projectSel" aria-label="Project filter">
+      <option value="">All projects</option>
+    </select>
+    <div class="live" id="liveDot" title="Live event stream">
+      <span class="led"></span><span class="live-label">LIVE</span>
+    </div>
+  </div>
+</header>
+
+<main id="main" hidden>
+  <section class="tiles">
+    <div class="tile hero">
+      <div class="tile-label">Total spend</div>
+      <div class="tile-value" id="tSpend">—</div>
+      <div class="tile-sub" id="tSpendSub">&nbsp;</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Requests</div>
+      <div class="tile-value" id="tReqs">—</div>
+      <div class="tile-sub" id="tReqsSub">&nbsp;</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Tokens</div>
+      <div class="tile-value" id="tTokens">—</div>
+      <div class="tile-sub" id="tTokensSub">&nbsp;</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Latency p50</div>
+      <div class="tile-value" id="tLatency">—</div>
+      <div class="tile-sub" id="tLatencySub">&nbsp;</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Projects</div>
+      <div class="tile-value" id="tProjects">—</div>
+      <div class="tile-sub" id="tProjectsSub">&nbsp;</div>
+    </div>
+  </section>
+
+  <section class="grid grid-b">
+    <div class="card span2">
+      <div class="card-head"><h2>Spend over time</h2><span class="card-note" id="spendNote"></span></div>
+      <div class="chart-box tall"><canvas id="spendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Spend by project</h2></div>
+      <div class="chart-box tall"><canvas id="projectChart"></canvas></div>
+    </div>
+  </section>
+
+  <section class="grid grid-c">
+    <div class="card">
+      <div class="card-head"><h2>Spend by model</h2></div>
+      <div class="chart-box"><canvas id="modelChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Requests &amp; errors</h2></div>
+      <div class="chart-box"><canvas id="reqChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Providers</h2></div>
+      <div class="provider-list" id="providerList"></div>
+    </div>
+  </section>
+
+  <section class="card feed">
+    <div class="card-head feed-head">
+      <h2>Request feed</h2>
+      <div class="feed-controls">
+        <input type="search" id="feedSearch" placeholder="filter by model, project…" />
+        <label class="check"><input type="checkbox" id="errorsOnly" /> errors only</label>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="feedTable">
+        <thead>
+          <tr><th>Time</th><th>Project</th><th>Provider · Model</th><th class="num">Tokens</th><th class="num">Cost</th><th class="num">Latency</th><th>Status</th></tr>
+        </thead>
+        <tbody id="feedBody"></tbody>
+      </table>
+      <div class="feed-empty" id="feedEmpty" hidden>No requests match.</div>
+    </div>
+  </section>
+</main>
+
+<section id="emptyState" class="empty" hidden>
+  <div class="empty-card">
+    <svg viewBox="0 0 32 32" width="42" height="42" aria-hidden="true">
+      <path d="M16 4 28 16 16 28 4 16Z" fill="none" stroke="var(--accent)" stroke-width="2"/>
+      <circle cx="16" cy="16" r="3" fill="var(--status-good)"/>
+    </svg>
+    <h1>Waiting for your first AI call</h1>
+    <p>Point any project — Python, Node, Java, anything — at this gateway and every LLM call
+       shows up here with tokens, cost and latency. Your API keys never change hands.</p>
+    <pre class="snippet" id="emptySnippet"></pre>
+    <p class="hint">More languages: <code>npx ai-command-center snippets</code></p>
+    <div class="empty-actions">
+      <button class="btn primary" id="seedBtn">Seed 14 days of demo data</button>
+      <span class="hint">instantly explore the dashboard — removable anytime</span>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <span id="footMeta"></span>
+  <span class="foot-right">
+    <span class="chip warn" id="unpricedChip" hidden></span>
+    <span class="chip" id="demoChip" hidden></span>
+  </span>
+</footer>
+
+<script src="/vendor/chart.umd.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
