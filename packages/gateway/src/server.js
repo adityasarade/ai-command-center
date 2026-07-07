@@ -65,7 +65,14 @@ export function createGateway(config) {
 
       // ---- gateway API ----
       if (pathname === '/health') {
-        return respondJson(res, 200, { ok: true, version: PKG.version, uptimeMs: Date.now() - startedAt });
+        // `name` is the product marker the CLI uses to distinguish this gateway
+        // from any other local service that answers 200 on /health.
+        return respondJson(res, 200, {
+          ok: true,
+          name: 'ai-command-center',
+          version: PKG.version,
+          uptimeMs: Date.now() - startedAt,
+        });
       }
       if (pathname === '/api/meta') {
         return respondJson(res, 200, {
@@ -256,6 +263,31 @@ export function startGateway(config) {
         reject(err);
       }
     });
-    gateway.server.listen(config.port, config.host, () => resolve(gateway));
+    gateway.server.listen(config.port, config.host, () => {
+      // Discovery file lets `aicc demo/stats/clear` find this gateway even when
+      // it runs on a non-default port. Best-effort; removed on close.
+      const discovery = path.join(config.dataDir, 'gateway.json');
+      try {
+        fs.writeFileSync(
+          discovery,
+          JSON.stringify({
+            port: gateway.server.address().port,
+            host: config.host,
+            pid: process.pid,
+            startedAt: Date.now(),
+          }),
+        );
+        gateway.server.once('close', () => {
+          try {
+            fs.unlinkSync(discovery);
+          } catch {
+            /* already gone */
+          }
+        });
+      } catch {
+        /* discovery is optional */
+      }
+      resolve(gateway);
+    });
   });
 }

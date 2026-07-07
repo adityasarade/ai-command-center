@@ -35,8 +35,12 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--all') flags.all = true;
   else if (a === '--json') flags.json = true;
   else if (a.startsWith('--')) {
-    const key = a.slice(2).replace(/-([a-z])/g, (_, ch) => ch.toUpperCase());
-    flags[key] = argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : true;
+    // support both `--flag value` and `--flag=value`
+    const eq = a.indexOf('=');
+    const raw = eq === -1 ? a.slice(2) : a.slice(2, eq);
+    const key = raw.replace(/-([a-z])/g, (_, ch) => ch.toUpperCase());
+    if (eq !== -1) flags[key] = a.slice(eq + 1);
+    else flags[key] = argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : true;
   } else positional.push(a);
 }
 const command = positional[0] || 'start';
@@ -114,8 +118,8 @@ async function cmdDemo() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ days, clear: !!flags.clear }),
     });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body?.error?.message || `HTTP ${res.status}`);
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(body?.error?.message || `gateway error: HTTP ${res.status}`);
     console.log(green(`✔ Seeded ${body.seeded} demo records into the running gateway.`));
     console.log(`  Dashboard: ${cyan(live)}`);
   } else {
@@ -125,6 +129,8 @@ async function cmdDemo() {
     const seeded = seedDemo(store, pricing, { days });
     await store.flush();
     console.log(green(`✔ Seeded ${seeded} demo records (${days} days, 4 sample projects).`));
+    console.log(dim(`  (no running gateway detected — wrote directly to ${store.file};`));
+    console.log(dim('   a gateway running on another port/data-dir will not see these records)'));
     console.log(`  Start the dashboard: ${bold('npx ai-command-center start')}`);
   }
   console.log(dim('  Demo data is tagged; remove it anytime with: npx ai-command-center clear'));
@@ -138,7 +144,8 @@ async function cmdClear() {
     const res = await fetch(`${live}/api/records?simulated=${simulatedOnly ? '1' : '0'}`, {
       method: 'DELETE',
     });
-    const body = await res.json();
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(body?.error?.message || `gateway error: HTTP ${res.status}`);
     console.log(green(`✔ Removed ${body.removed} ${simulatedOnly ? 'demo ' : ''}records.`));
   } else {
     const store = new Store(config.dataDir).init();
@@ -155,7 +162,9 @@ async function cmdStats() {
   let stats;
   const live = await liveGateway(config);
   if (live) {
-    stats = await (await fetch(`${live}/api/stats?range=${range}`)).json();
+    const res = await fetch(`${live}/api/stats?range=${range}`);
+    if (!res.ok) throw new Error(`gateway error: HTTP ${res.status}`);
+    stats = await res.json();
   } else {
     const store = new Store(config.dataDir).init();
     stats = computeStats(store.records, { range });
@@ -197,12 +206,25 @@ function cmdSnippets() {
 
 // -------------------------------------------------------------------- helpers
 async function liveGateway(config) {
-  const url = `http://${displayHost(config.host)}:${config.port}`;
+  // A running gateway may be on a different port than this invocation's config —
+  // it leaves a discovery file in the (shared) data dir. Check that first.
+  const candidates = [];
   try {
-    const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(700) });
-    if (res.ok) return url;
+    const disc = JSON.parse(fs.readFileSync(path.join(config.dataDir, 'gateway.json'), 'utf8'));
+    if (disc?.port) candidates.push(`http://${displayHost(disc.host)}:${disc.port}`);
   } catch {
-    /* not running */
+    /* no discovery file */
+  }
+  candidates.push(`http://${displayHost(config.host)}:${config.port}`);
+  for (const url of [...new Set(candidates)]) {
+    try {
+      const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(700) });
+      const body = await res.json().catch(() => null);
+      // require the product marker — a foreign service answering 200 on /health is not us
+      if (res.ok && body?.name === 'ai-command-center') return url;
+    } catch {
+      /* not running here */
+    }
   }
   return null;
 }

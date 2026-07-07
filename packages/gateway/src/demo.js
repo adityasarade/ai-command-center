@@ -5,7 +5,8 @@ import crypto from 'node:crypto';
  * without a single real API call:
  *   - 4 AI products with distinct model mixes and volumes
  *   - business-hours + weekday weighting
- *   - a cost-spike incident 3 days ago (claims-copilot briefly on Opus)
+ *   - a cost-spike incident a few days ago (claims-copilot briefly on Opus,
+ *     placed on the nearest weekday so the story survives weekend seeding)
  *   - a rate-limit error burst yesterday (support-chatbot)
  * All records carry simulated:true so they can be purged with `aicc clear`.
  */
@@ -79,6 +80,11 @@ export function generateDemoRecords(pricing, { days = 14, now = Date.now(), seed
   };
   const between = ([lo, hi]) => lo + Math.round(rand() * (hi - lo));
 
+  // Cost-spike incident day: walk back from 3 days ago to the nearest weekday
+  // (a weekend spike would be suppressed by the low weekend volume).
+  let spikeD = 3;
+  while ([0, 6].includes(new Date(now - spikeD * dayMs).getDay())) spikeD++;
+
   for (let d = days - 1; d >= 0; d--) {
     const dayStart = new Date(now - d * dayMs);
     dayStart.setHours(0, 0, 0, 0);
@@ -100,9 +106,8 @@ export function generateDemoRecords(pricing, { days = 14, now = Date.now(), seed
         let provider = mix.provider;
         let model = mix.model;
 
-        // Incident: 3 days ago claims-copilot ran Opus between 10:00–16:00 (config slip).
-        const isSpike =
-          project.name === 'claims-copilot' && d === 3 && hour >= 10 && hour < 16 && weekdayFactor === 1;
+        // Incident: a few days ago claims-copilot ran Opus between 10:00–16:00 (config slip).
+        const isSpike = project.name === 'claims-copilot' && d === spikeD && hour >= 10 && hour < 16;
         if (isSpike) {
           provider = 'anthropic';
           model = 'claude-opus-4-5';

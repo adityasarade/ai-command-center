@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { normalizeModel, PricingEngine } from '../src/pricing.js';
 import { SseParser, makeStreamAccumulator, extractFromJson } from '../src/usage.js';
 import { parseProxyPath, buildProviderTable } from '../src/providers.js';
+import { computeStats } from '../src/stats.js';
+import { generateDemoRecords } from '../src/demo.js';
 
 test('normalizeModel strips prefixes, dates, and -latest', () => {
   assert.equal(normalizeModel('models/gemini-2.5-flash'), 'gemini-2.5-flash');
@@ -88,6 +90,42 @@ test('parseProxyPath: project prefix, plain, unknown', () => {
   });
   assert.equal(parseProxyPath('/nope/v1/x', table), null);
   assert.equal(parseProxyPath('/api/stats', table), null);
+});
+
+const rec = (ts, extra = {}) => ({
+  ts, project: 'p', provider: 'openai', model: 'gpt-4o-mini', ok: true,
+  latencyMs: 100, tokensIn: 10, tokensOut: 5, costUsd: 0.001, priced: true, ...extra,
+});
+
+test('stats range=all sees unsorted/backfilled records', () => {
+  const now = Date.now();
+  // newest record first in the array — simulates live append then historical backfill
+  const records = [rec(now), rec(now - 10 * 24 * 3600e3), rec(now - 5 * 24 * 3600e3)];
+  const stats = computeStats(records, { range: 'all' });
+  assert.equal(stats.totals.requests, 3);
+});
+
+test('daily buckets align to local midnight', () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 4); // force daily bucketing via a >3d range
+  d.setHours(23, 50, 0, 0);
+  const stats = computeStats([rec(d.getTime())], { range: '7d' });
+  const hit = stats.timeseries.points.find((p) => p.requests === 1);
+  assert.ok(hit, 'record landed in a bucket');
+  const bucketDay = new Date(hit.t);
+  assert.equal(bucketDay.getHours(), 0);
+  assert.equal(bucketDay.getDate(), d.getDate(), 'same local calendar day');
+});
+
+test('demo seeder always includes the Opus cost-spike, any day of week', () => {
+  const pricing = new PricingEngine();
+  for (let offset = 0; offset < 7; offset++) {
+    const now = Date.UTC(2026, 6, 1 + offset, 12, 0, 0); // Wed Jul 1 2026 + offset
+    const records = generateDemoRecords(pricing, { days: 14, now });
+    const opus = records.filter((r) => r.model === 'claude-opus-4-5');
+    assert.ok(opus.length > 0, `no Opus spike when seeding on offset ${offset}`);
+    assert.ok(records.every((r) => r.ts <= now), 'no records in the future');
+  }
 });
 
 test('provider table: config upstream override + custom provider', () => {

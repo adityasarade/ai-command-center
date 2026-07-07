@@ -15,7 +15,10 @@ export function resolveRange(query, records) {
   }
   const range = query.range || '7d';
   if (range === 'all') {
-    const first = records.length ? records[0].ts : now - RANGES['7d'];
+    // records are not guaranteed sorted (live appends + backfills) — take the true minimum
+    const first = records.length
+      ? records.reduce((min, r) => Math.min(min, r.ts), Infinity)
+      : now - RANGES['7d'];
     return { from: first, to: now };
   }
   return { from: now - (RANGES[range] || RANGES['7d']), to: now };
@@ -125,17 +128,30 @@ function finalize(map, keyName) {
     .sort((a, b) => b.costUsd - a.costUsd || b.requests - a.requests);
 }
 
-/** Continuous time buckets (hourly ≤ 3 days span, else daily) covering [from, to]. */
+/** Continuous time buckets (hourly ≤ 3 days span, else daily) covering [from, to].
+ *  Daily buckets align to LOCAL midnight on the gateway host, not UTC, so day
+ *  bars match the calendar day users actually experienced. */
 function bucketize(records, from, to) {
   const span = to - from;
-  const size = span <= 3 * 24 * 3600e3 ? 3600e3 : 24 * 3600e3;
-  const start = Math.floor(from / size) * size;
+  const hourly = span <= 3 * 24 * 3600e3;
+  const size = hourly ? 3600e3 : 24 * 3600e3;
+  const floorBucket = hourly
+    ? (ts) => Math.floor(ts / size) * size
+    : (ts) => new Date(ts).setHours(0, 0, 0, 0);
+  const mk = (t) => ({ t, requests: 0, errors: 0, costUsd: 0, tokensIn: 0, tokensOut: 0, byProject: {} });
   const buckets = new Map();
-  for (let t = start; t <= to; t += size) {
-    buckets.set(t, { t, requests: 0, errors: 0, costUsd: 0, tokensIn: 0, tokensOut: 0, byProject: {} });
+  if (hourly) {
+    for (let t = floorBucket(from); t <= to; t += size) buckets.set(t, mk(t));
+  } else {
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    while (d.getTime() <= to) {
+      buckets.set(d.getTime(), mk(d.getTime()));
+      d.setDate(d.getDate() + 1); // calendar-day step (DST-safe)
+    }
   }
   for (const r of records) {
-    const b = buckets.get(Math.floor(r.ts / size) * size);
+    const b = buckets.get(floorBucket(r.ts));
     if (!b) continue;
     b.requests += 1;
     if (!r.ok) b.errors += 1;
