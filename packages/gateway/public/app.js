@@ -123,6 +123,24 @@
       /[&<>"']/g,
       (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch],
     );
+  const fmtDate = (ts) => new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const fmtDateTime = (ts) =>
+    new Date(ts).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  const fmtDuration = (ms) => {
+    if (ms == null) return '-';
+    if (ms < 1000) return Math.round(ms) + 'ms';
+    if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+    const m = Math.floor(ms / 60000);
+    const s = Math.round((ms % 60000) / 1000);
+    return `${m}m ${s}s`;
+  };
+  const shortModel = (m) => (m && m.length > 22 ? m.slice(0, 21) + '…' : m || '(unknown)');
 
   async function api(path) {
     const res = await fetch(path);
@@ -131,11 +149,14 @@
   }
 
   // ------------------------------------------------------------ state
+  const FEED_LIMIT = 50;
   const state = {
+    view: 'overview',
     range: '7d',
     project: '',
     q: '',
     errorsOnly: false,
+    feedOffset: 0,
     cur: localStorage.getItem('aicc-currency') || null,
     fx: null,
   };
@@ -467,9 +488,15 @@
       .map((r) => `<tr title="${esc(r.errorMessage || r.endpoint || '')}">${rowHtml(r)}</tr>`)
       .join('');
     $('feedEmpty').hidden = list.items.length > 0;
+    const start = list.total ? state.feedOffset + 1 : 0;
+    const end = state.feedOffset + list.items.length;
+    $('feedPageInfo').textContent = `${start}-${end} of ${fmtNum(list.total)}`;
+    $('feedPrev').disabled = state.feedOffset === 0;
+    $('feedNext').disabled = end >= list.total;
   }
 
   function prependFeedRow(r) {
+    if (state.view !== 'overview' || state.feedOffset !== 0) return;
     if (state.project && r.project !== state.project) return;
     if (state.errorsOnly && r.ok) return;
     if (state.q) {
@@ -577,6 +604,12 @@
   }
 
   // ------------------------------------------------------------ data flow
+  function rangeQuery(extra = {}) {
+    const q = new URLSearchParams({ range: state.range, ...extra });
+    if (state.project) q.set('project', state.project);
+    return q;
+  }
+
   async function loadAll(full) {
     const seq = ++loadSeq;
     try {
@@ -588,18 +621,9 @@
       }
       hideGate();
 
-      const statsQ = new URLSearchParams({ range: state.range });
-      if (state.project) statsQ.set('project', state.project);
-      const reqQ = new URLSearchParams({ limit: '100' });
-      if (state.project) reqQ.set('project', state.project);
-      if (state.q) reqQ.set('q', state.q);
-      if (state.errorsOnly) reqQ.set('errorsOnly', '1');
-
-      const [m, fx, stats, requests, projects] = await Promise.all([
+      const [m, fx, projects] = await Promise.all([
         api('/api/meta'),
         api('/api/fx'),
-        api('/api/stats?' + statsQ),
-        api('/api/requests?' + reqQ),
         api('/api/projects'),
       ]);
       if (seq !== loadSeq) return; // a newer load superseded this one
@@ -609,6 +633,8 @@
       if (!state.cur || !fx.options.includes(state.cur)) state.cur = fx.default;
       renderCurSeg();
       $('metaVersion').textContent = 'v' + m.version;
+      assignColors(projects);
+      if (full) populateProjects(projects);
 
       const empty = m.records === 0;
       $('emptyState').hidden = !empty;
@@ -622,31 +648,11 @@
           `export ANTHROPIC_BASE_URL="${base}/anthropic"\n` +
           `# then run your app exactly as before - that's the whole integration`;
         $('seedBtn').style.display = auth.locked && auth.user?.role !== 'admin' ? 'none' : '';
-        if (full) populateProjects(projects);
         return;
       }
 
-      // Previous window for deltas (same span, immediately before).
-      const span = stats.to - stats.from;
-      const prevQ = new URLSearchParams({
-        from: String(stats.from - span),
-        to: String(stats.from),
-      });
-      if (state.project) prevQ.set('project', state.project);
-      const prev = state.range === 'all' ? null : await api('/api/stats?' + prevQ);
-      if (seq !== loadSeq) return;
-
-      assignColors(projects);
-      renderTiles(stats, prev);
-      renderSpendChart(stats);
-      renderProjectChart(stats);
-      renderModelChart(stats);
-      renderReqChart(stats);
-      renderProviders(stats);
-      renderFeed(requests);
-      renderFooter(stats);
-
-      if (full) populateProjects(projects);
+      await refreshAlertBadge();
+      await renderActiveView(seq);
     } catch (err) {
       if (String(err).includes('HTTP 401')) {
         await refreshAuth();
@@ -655,6 +661,199 @@
       }
       console.error('[aicc] dashboard load failed:', err);
     }
+  }
+
+  async function renderActiveView(seq) {
+    if (state.view === 'overview') return loadOverview(seq);
+    if (state.view === 'traces') return loadTraces();
+    if (state.view === 'prompts') return loadPrompts();
+    if (state.view === 'models') return loadModels();
+    if (state.view === 'alerts') return loadAlerts();
+  }
+
+  async function loadOverview(seq) {
+    const reqQ = rangeQuery({ limit: String(FEED_LIMIT), offset: String(state.feedOffset) });
+    if (state.q) reqQ.set('q', state.q);
+    if (state.errorsOnly) reqQ.set('errorsOnly', '1');
+    const [stats, requests] = await Promise.all([
+      api('/api/stats?' + rangeQuery()),
+      api('/api/requests?' + reqQ),
+    ]);
+    if (seq !== loadSeq) return;
+
+    let prev = null;
+    if (state.range !== 'all') {
+      const span = stats.to - stats.from;
+      const prevQ = rangeQuery();
+      prevQ.delete('range');
+      prevQ.set('from', String(stats.from - span));
+      prevQ.set('to', String(stats.from));
+      prev = await api('/api/stats?' + prevQ);
+      if (seq !== loadSeq) return;
+    }
+
+    renderTiles(stats, prev);
+    renderSpendChart(stats);
+    renderProjectChart(stats);
+    renderModelChart(stats);
+    renderReqChart(stats);
+    renderProviders(stats);
+    renderFeed(requests);
+    renderFooter(stats);
+  }
+
+  async function refreshAlertBadge() {
+    try {
+      const { alerts } = await api('/api/alerts');
+      const badge = $('alertBadge');
+      if (alerts && alerts.length) {
+        badge.textContent = String(alerts.length);
+        badge.hidden = false;
+      } else {
+        badge.hidden = true;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // ---- Traces view ----
+  async function loadTraces() {
+    const { items } = await api('/api/traces?' + rangeQuery({ limit: '100' }));
+    $('tracesNote').textContent = items.length ? `${items.length} sessions` : '';
+    $('tracesEmpty').hidden = items.length > 0;
+    $('tracesBody').innerHTML = items
+      .map(
+        (t) => `<tr class="clickable" data-trace="${esc(t.id)}">
+        <td class="t-dim">${fmtDateTime(t.start)}</td>
+        <td><span class="dot" style="background:${projectColor(t.project)}"></span>${esc(t.project)}</td>
+        <td class="num">${t.calls}${t.errors ? ` <span class="err-count">(${t.errors} err)</span>` : ''}</td>
+        <td class="t-dim">${esc(t.providers.join(', '))} · ${esc(t.models.map(shortModel).join(', '))}</td>
+        <td class="num">${fmtNum(t.tokens)}</td>
+        <td class="num t-cost">${fmtMoney(t.costUsd)}</td>
+        <td class="num">${fmtDuration(t.spanMs)}</td></tr>`,
+      )
+      .join('');
+    $('traceDetailCard').hidden = true;
+  }
+
+  async function openTrace(id) {
+    const t = await api('/api/trace?id=' + encodeURIComponent(id));
+    $('traceDetailCard').hidden = false;
+    $('traceDetailTitle').textContent =
+      `Trace ${id.slice(0, 12)}… · ${t.calls.length} calls · ${fmtMoney(t.costUsd)} · ${fmtDuration(t.spanMs)}`;
+    const maxOff = Math.max(1, ...t.calls.map((c) => c.offsetMs + (c.latencyMs || 0)));
+    $('traceTimeline').innerHTML = t.calls
+      .map((c) => {
+        const left = (c.offsetMs / maxOff) * 100;
+        const width = Math.max(3, ((c.latencyMs || 0) / maxOff) * 100);
+        return `<div class="tl-row">
+          <span class="tl-off">+${fmtDuration(c.offsetMs)}</span>
+          <div class="tl-bar${c.ok ? '' : ' err'}">
+            <span class="fill" style="left:${left}%;width:${width}%"></span>
+            <span class="tl-model">${esc(c.provider)} · ${esc(shortModel(c.model))}${c.prompt ? ` <span class="tag">${esc(c.prompt)}${c.promptVersion ? ' ' + esc(c.promptVersion) : ''}</span>` : ''}</span>
+            <span class="tl-meta">${c.tokensTotal != null || c.tokensIn != null ? fmtNum((c.tokensIn || 0) + (c.tokensOut || 0)) + ' tok · ' : ''}${fmtMoney(c.costUsd)} · ${fmtMs(c.latencyMs)}${c.ok ? '' : ' · ' + (c.status || 'ERR')}</span>
+          </div></div>`;
+      })
+      .join('');
+    $('traceDetailCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ---- Prompts view ----
+  async function loadPrompts() {
+    const { items } = await api('/api/prompts?' + rangeQuery());
+    $('promptsEmpty').hidden = items.length > 0;
+    $('promptsBody').innerHTML = items
+      .map(
+        (p) => `<tr>
+        <td>${esc(p.prompt)}</td>
+        <td class="t-dim">${esc(p.version || '-')}</td>
+        <td><span class="dot" style="background:${projectColor(p.project)}"></span>${esc(p.project)}</td>
+        <td class="num">${fmtNum(p.requests)}</td>
+        <td class="num${p.errorRate > 0.05 ? ' err-count' : ''}">${(p.errorRate * 100).toFixed(1)}%</td>
+        <td class="num t-cost">${fmtMoney(p.avgCostUsd)}</td>
+        <td class="num">${fmtNum(p.tokens)}</td>
+        <td class="num">${fmtMs(p.p50LatencyMs)}</td>
+        <td class="num">${fmtMs(p.p95LatencyMs)}</td></tr>`,
+      )
+      .join('');
+  }
+
+  // ---- Models view ----
+  async function loadModels() {
+    const { items } = await api('/api/models?' + rangeQuery());
+    $('modelsEmpty').hidden = items.length > 0;
+    $('modelsBody').innerHTML = items
+      .map(
+        (m) => `<tr>
+        <td><span class="t-dim">${esc(m.provider)} ·</span> ${esc(m.model)}</td>
+        <td class="num">${fmtNum(m.requests)}</td>
+        <td class="num t-cost">${fmtMoney(m.costUsd)}</td>
+        <td class="num">${m.effectivePerMTok ? fmtMoney(m.effectivePerMTok) : '-'}</td>
+        <td class="num">${fmtNum(m.tokens)}</td>
+        <td class="num">${fmtMs(m.p50LatencyMs)}</td>
+        <td class="num">${fmtMs(m.p95LatencyMs)}</td>
+        <td class="num${m.errorRate > 0.05 ? ' err-count' : ''}">${(m.errorRate * 100).toFixed(1)}%</td></tr>`,
+      )
+      .join('');
+  }
+
+  // ---- Alerts view ----
+  async function loadAlerts() {
+    const isAdmin = !auth.locked || auth.user?.role === 'admin';
+    const [data, anomaliesRes] = await Promise.all([
+      api('/api/alerts'),
+      api('/api/anomalies?' + rangeQuery({ range: '30d' })),
+    ]);
+    const sevRank = (a) => (a.severity === 'critical' ? 0 : 1);
+    $('alertsList').innerHTML = data.alerts.length
+      ? data.alerts
+          .sort((a, b) => sevRank(a) - sevRank(b))
+          .map(
+            (a) => `<div class="alert-item ${a.severity}">
+          <span class="a-type">${esc(a.type.replace('_', ' '))}</span>
+          <span>${esc(a.message)}</span></div>`,
+          )
+          .join('')
+      : '<div class="alerts-empty">No active alerts. All projects within budget and thresholds.</div>';
+
+    const anomalies = anomaliesRes.anomalies || [];
+    $('anomaliesList').innerHTML = anomalies.length
+      ? anomalies
+          .map(
+            (a) => `<div class="alert-item ${a.severity}">
+          <span class="a-type">${esc(a.type.replace('_', ' '))}</span>
+          <span>${fmtDate(a.date)} - ${esc(a.message)}</span></div>`,
+          )
+          .join('')
+      : '<div class="alerts-empty">No anomalies detected.</div>';
+
+    // Budgets with progress
+    const budgets = data.budgets || [];
+    $('budgetsList').innerHTML = budgets.length
+      ? budgets
+          .map((b) => {
+            const cls = b.pct >= 100 ? 'over' : b.pct >= b.alertAtPct ? 'warn' : '';
+            return `<div class="budget-row">
+            <span class="b-name">${esc(b.project)}</span>
+            <span class="budget-bar"><i class="${cls}" style="width:${Math.min(100, b.pct)}%"></i></span>
+            <span class="b-amt">${fmtMoney(b.spentUsd)} / ${fmtMoney(b.monthlyUsd)} (${b.pct.toFixed(0)}%)</span>
+            ${isAdmin ? `<button class="b-del" data-del-budget="${esc(b.project)}" title="remove budget">×</button>` : '<span></span>'}
+          </div>`;
+          })
+          .join('')
+      : '<div class="alerts-empty">No budgets set yet.</div>';
+    $('budgetsNote').textContent = 'this calendar month, in USD';
+
+    // Admin budget form
+    $('budgetForm').hidden = !isAdmin;
+    if (isAdmin) {
+      const known = (await api('/api/projects')).map((p) => p.project);
+      $('budgetProject').innerHTML = known
+        .map((p) => `<option value="${esc(p)}">${esc(p)}</option>`)
+        .join('');
+    }
+    $('budgetErr').textContent = '';
   }
 
   function populateProjects(projects) {
@@ -678,7 +877,7 @@
     if (refreshTimer) return;
     refreshTimer = setTimeout(() => {
       refreshTimer = null;
-      loadAll(true);
+      loadAll(false);
     }, 2500);
   }
 
@@ -698,11 +897,28 @@
     };
   }
 
+  // ------------------------------------------------------------ view router
+  function setView(name) {
+    state.view = name;
+    for (const b of $('viewNav').children) b.classList.toggle('on', b.dataset.view === name);
+    for (const el of document.querySelectorAll('.view')) {
+      el.hidden = el.id !== 'view-' + name;
+    }
+    if (!$('adminPanel').hidden) hideAdmin();
+    renderActiveView(++loadSeq);
+  }
+
   // ------------------------------------------------------------ wiring
+  $('viewNav').addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button[data-view]');
+    if (btn) setView(btn.dataset.view);
+  });
+
   $('rangeSeg').addEventListener('click', (ev) => {
     const btn = ev.target.closest('button[data-range]');
     if (!btn) return;
     state.range = btn.dataset.range;
+    state.feedOffset = 0;
     for (const b of $('rangeSeg').children) b.classList.toggle('on', b === btn);
     loadAll(false);
   });
@@ -718,19 +934,66 @@
 
   $('projectSel').addEventListener('change', (ev) => {
     state.project = ev.target.value;
+    state.feedOffset = 0;
     loadAll(false);
   });
 
   let searchTimer = null;
   $('feedSearch').addEventListener('input', (ev) => {
     state.q = ev.target.value.trim();
+    state.feedOffset = 0;
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => loadAll(false), 250);
+    searchTimer = setTimeout(() => loadOverview(++loadSeq), 250);
   });
 
   $('errorsOnly').addEventListener('change', (ev) => {
     state.errorsOnly = ev.target.checked;
-    loadAll(false);
+    state.feedOffset = 0;
+    loadOverview(++loadSeq);
+  });
+
+  $('feedPrev').addEventListener('click', () => {
+    state.feedOffset = Math.max(0, state.feedOffset - FEED_LIMIT);
+    loadOverview(++loadSeq);
+  });
+  $('feedNext').addEventListener('click', () => {
+    state.feedOffset += FEED_LIMIT;
+    loadOverview(++loadSeq);
+  });
+
+  $('tracesBody').addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr[data-trace]');
+    if (tr) openTrace(tr.dataset.trace);
+  });
+  $('traceClose').addEventListener('click', () => {
+    $('traceDetailCard').hidden = true;
+  });
+
+  $('budgetSave').addEventListener('click', async () => {
+    try {
+      await apiSend('POST', '/api/admin/budget', {
+        project: $('budgetProject').value,
+        monthlyUsd: Number($('budgetAmount').value),
+        alertAtPct: $('budgetPct').value ? Number($('budgetPct').value) : undefined,
+      });
+      $('budgetAmount').value = '';
+      $('budgetPct').value = '';
+      await loadAlerts();
+      await refreshAlertBadge();
+    } catch (err) {
+      $('budgetErr').textContent = err.message;
+    }
+  });
+  $('budgetsList').addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('button[data-del-budget]');
+    if (!btn) return;
+    try {
+      await apiSend('DELETE', '/api/admin/budget/' + encodeURIComponent(btn.dataset.delBudget));
+      await loadAlerts();
+      await refreshAlertBadge();
+    } catch (err) {
+      $('budgetErr').textContent = err.message;
+    }
   });
 
   $('seedBtn').addEventListener('click', async (ev) => {
