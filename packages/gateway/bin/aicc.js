@@ -256,7 +256,7 @@ async function cmdUser() {
     if (!flags.username || !flags.password) {
       throw new Error('usage: aicc user add --username <name> --password <pass> [--role admin|member]');
     }
-    const user = auth.createUser({
+    const user = await auth.createUser({
       username: flags.username,
       password: flags.password,
       role: flags.role || (auth.db.users.length === 0 ? 'admin' : 'member'),

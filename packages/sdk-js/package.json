@@ -10,7 +10,9 @@
   },
   "files": [
     "index.mjs",
-    "index.cjs"
+    "index.cjs",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18.17"

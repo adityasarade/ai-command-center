@@ -11,12 +11,12 @@ over 400 paired requests.
 
 | metric | value |
 |---|---|
-| direct p50 | 0.19 ms |
-| through gateway p50 | 0.42 ms |
-| **added overhead p50** | **0.2 ms** |
-| added overhead p95 | 0.5 ms |
-| added overhead p99 | 0.89 ms |
-| added overhead mean | 0.25 ms |
+| direct p50 | 0.17 ms |
+| through gateway p50 | 0.38 ms |
+| **added overhead p50** | **0.19 ms** |
+| added overhead p95 | 0.48 ms |
+| added overhead p99 | 1.19 ms |
+| added overhead mean | 0.24 ms |
 
 Against real LLM calls (typically 300 ms–30 s) this overhead is negligible.
 

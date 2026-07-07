@@ -349,6 +349,15 @@ test('/api/fx serves configured manual rates', async () => {
   assert.deepEqual(fx.options, ['INR', 'USD', 'EUR']);
 });
 
+test('/llms.txt is served as text for agents', async () => {
+  const res = await fetch(`${base}/llms.txt`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/plain/);
+  const body = await res.text();
+  assert.match(body, /AI Command Center/);
+  assert.match(body, /\/api\/track/);
+});
+
 test('records persist to JSONL and reload', async () => {
   await store.flush();
   const raw = fs.readFileSync(store.file, 'utf8').trim().split('\n');

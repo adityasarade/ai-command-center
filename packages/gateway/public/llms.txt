@@ -1,0 +1,20 @@
+# AI Command Center — gateway
+
+> This is a running AI Command Center gateway: a transparent LLM proxy + usage/cost
+> dashboard. Route your app's LLM calls through it by pointing the provider SDK's
+> base URL here. Your API key passes through untouched; prompt/response bodies are
+> never stored (metadata only).
+
+Integrate (replace the origin with this gateway's origin):
+- OpenAI-compatible: `<origin>/p/<project>/openai/v1`
+- Anthropic: `<origin>/p/<project>/anthropic`
+- Gemini: `<origin>/p/<project>/gemini`
+- Also: openrouter, mistral, deepseek, xai, groq, together, ollama, + custom
+- Zero code change: set OPENAI_BASE_URL / ANTHROPIC_BASE_URL / GOOGLE_GEMINI_BASE_URL
+- Group by project via the `/p/<project>/` path or an `x-aicc-project` header
+- With auth enabled use `/k/<gateway-key>/…` (the key authenticates and sets the project) or header `x-aicc-key`
+- Report usage the proxy can't see: `POST <origin>/api/track` with JSON {project, provider, model, tokensIn, tokensOut}
+
+HTTP API (JSON): GET /health, /api/meta, /api/stats?range=7d, /api/requests, /api/projects, /api/fx, /api/events (SSE); POST /api/track.
+
+Docs & source: https://github.com/adityasarade/ai-command-center — MIT.

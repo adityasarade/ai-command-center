@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { promisify } from 'node:util';
+
+const scryptAsync = promisify(crypto.scrypt);
 
 /**
  * Zero-dependency auth for the dashboard + gateway keys for the proxy.
@@ -57,11 +60,14 @@ export class AuthService {
   }
 
   // ---------------------------------------------------------------- users
-  static hashPassword(password, salt) {
-    return crypto.scryptSync(String(password), salt, 64).toString('hex');
+  // Async so a burst of login/setup attempts can't block the event loop
+  // (and stall proxied LLM traffic) while scrypt runs.
+  static async hashPassword(password, salt) {
+    const buf = await scryptAsync(String(password), salt, 64);
+    return buf.toString('hex');
   }
 
-  createUser({ username, password, role = 'member', teamId = null }) {
+  async createUser({ username, password, role = 'member', teamId = null }) {
     username = String(username || '').trim().toLowerCase();
     if (!/^[a-z0-9._@-]{2,64}$/.test(username)) {
       throw httpError(400, 'username must be 2-64 chars (letters, digits, . _ @ -)');
@@ -75,7 +81,7 @@ export class AuthService {
       id: 'u_' + crypto.randomUUID().slice(0, 8),
       username,
       salt,
-      passwordHash: AuthService.hashPassword(password, salt),
+      passwordHash: await AuthService.hashPassword(password, salt),
       role,
       teamId: teamId || null,
       createdAt: Date.now(),
@@ -85,7 +91,7 @@ export class AuthService {
     return this.publicUser(user);
   }
 
-  updateUser(id, { role, teamId, password }) {
+  async updateUser(id, { role, teamId, password }) {
     const user = this.db.users.find((u) => u.id === id);
     if (!user) throw httpError(404, 'no such user');
     if (role) {
@@ -102,7 +108,7 @@ export class AuthService {
     if (password) {
       if (String(password).length < 8) throw httpError(400, 'password must be at least 8 characters');
       user.salt = crypto.randomBytes(16).toString('hex');
-      user.passwordHash = AuthService.hashPassword(password, user.salt);
+      user.passwordHash = await AuthService.hashPassword(password, user.salt);
     }
     this._persist();
     return this.publicUser(user);
@@ -120,10 +126,10 @@ export class AuthService {
     return this.db.users.filter((u) => u.role === 'admin').length;
   }
 
-  verifyLogin(username, password) {
+  async verifyLogin(username, password) {
     const user = this.db.users.find((u) => u.username === String(username || '').trim().toLowerCase());
     if (!user) return null;
-    const hash = AuthService.hashPassword(password, user.salt);
+    const hash = await AuthService.hashPassword(password, user.salt);
     const a = Buffer.from(hash, 'hex');
     const b = Buffer.from(user.passwordHash, 'hex');
     return a.length === b.length && crypto.timingSafeEqual(a, b) ? user : null;
@@ -143,13 +149,15 @@ export class AuthService {
   }
 
   // -------------------------------------------------------------- sessions
-  issueSessionCookie(user) {
+  issueSessionCookie(user, { secure = false } = {}) {
     const payload = b64url(
       JSON.stringify({ uid: user.id, exp: Date.now() + SESSION_DAYS * 24 * 3600e3 }),
     );
     const sig = crypto.createHmac('sha256', this.db.sessionSecret).update(payload).digest('base64url');
     const maxAge = SESSION_DAYS * 24 * 3600;
-    return `${SESSION_COOKIE}=${payload}.${sig}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}`;
+    // Secure is added when the request arrived over TLS (e.g. via a reverse proxy),
+    // never on plain-HTTP localhost (browsers reject Secure cookies over http).
+    return `${SESSION_COOKIE}=${payload}.${sig}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${secure ? '; Secure' : ''}`;
   }
 
   clearSessionCookie() {
@@ -244,10 +252,16 @@ export class AuthService {
     this._persist();
   }
 
-  /** Resolve a gateway key to its project, or null. */
+  /** Resolve a gateway key to its project, or null (constant-time compare). */
   projectForKey(key) {
     if (!key || typeof key !== 'string') return null;
-    return this.db.projects.find((p) => p.key === key) || null;
+    const kb = Buffer.from(key);
+    let found = null;
+    for (const p of this.db.projects) {
+      const pb = Buffer.from(p.key);
+      if (pb.length === kb.length && crypto.timingSafeEqual(pb, kb)) found = p;
+    }
+    return found;
   }
 
   /**

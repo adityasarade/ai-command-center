@@ -23,6 +23,7 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.json': 'application/json',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 export function createGateway(config) {
@@ -83,7 +84,7 @@ export function createGateway(config) {
       if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
         return serveStatic(res, 'index.html');
       }
-      if (req.method === 'GET' && /^\/(app\.js|style\.css|logo\.svg|vendor\/chart\.umd\.js)$/.test(pathname)) {
+      if (req.method === 'GET' && /^\/(app\.js|style\.css|logo\.svg|llms\.txt|vendor\/chart\.umd\.js)$/.test(pathname)) {
         return serveStatic(res, pathname.slice(1));
       }
       if (pathname === '/health') {
@@ -270,19 +271,20 @@ async function handleAuthRoutes(req, res, pathname, { auth, config }) {
       branding: config.branding, // public: lets the login screen show company branding
     });
   }
+  const secure = req.headers['x-forwarded-proto'] === 'https';
   if (pathname === '/api/auth/setup' && req.method === 'POST') {
     if (auth.disabled) return respondJson(res, 400, { error: { message: 'auth is disabled (--no-auth)' } });
     if (auth.db.users.length > 0) return respondJson(res, 403, { error: { message: 'setup already completed' } });
     const body = await jsonBody(req);
-    const user = auth.createUser({ username: body.username, password: body.password, role: 'admin' });
-    res.setHeader('set-cookie', auth.issueSessionCookie(user));
+    const user = await auth.createUser({ username: body.username, password: body.password, role: 'admin' });
+    res.setHeader('set-cookie', auth.issueSessionCookie(user, { secure }));
     return respondJson(res, 200, { user });
   }
   if (pathname === '/api/auth/login' && req.method === 'POST') {
     const body = await jsonBody(req);
-    const user = auth.verifyLogin(body.username, body.password);
+    const user = await auth.verifyLogin(body.username, body.password);
     if (!user) return respondJson(res, 401, { error: { message: 'invalid username or password' } });
-    res.setHeader('set-cookie', auth.issueSessionCookie(user));
+    res.setHeader('set-cookie', auth.issueSessionCookie(user, { secure }));
     return respondJson(res, 200, { user: auth.publicUser(user) });
   }
   if (pathname === '/api/auth/logout' && req.method === 'POST') {
@@ -307,11 +309,11 @@ async function handleAdminRoutes(req, res, pathname, { auth, store }) {
   }
   if (seg[0] === 'users' && req.method === 'POST' && seg.length === 1) {
     const body = await jsonBody(req);
-    return respondJson(res, 200, { user: auth.createUser(body) });
+    return respondJson(res, 200, { user: await auth.createUser(body) });
   }
   if (seg[0] === 'users' && req.method === 'PATCH' && seg.length === 2) {
     const body = await jsonBody(req);
-    return respondJson(res, 200, { user: auth.updateUser(seg[1], body) });
+    return respondJson(res, 200, { user: await auth.updateUser(seg[1], body) });
   }
   if (seg[0] === 'users' && req.method === 'DELETE' && seg.length === 2) {
     auth.deleteUser(seg[1]);

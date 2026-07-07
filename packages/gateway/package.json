@@ -14,7 +14,8 @@
     "public",
     "pricing",
     "presets",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "start": "node bin/aicc.js start",

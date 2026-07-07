@@ -38,9 +38,10 @@ client = OpenAI(base_url="http://localhost:4321/p/invoice-bot/openai/v1")
 That's the whole integration. **Full docs & a live interactive demo:
 [ai-command-center.dev](https://ai-command-center.dev)**
 
-This is the working implementation of the **AI Box** platform sketched in
-[`Docs/pitch.md`](Docs/pitch.md) — its SDK + LLM Gateway + cost-visibility slice,
-built to actually run.
+It began as the working implementation of an internal "AI Box" platform concept —
+its SDK + LLM Gateway + cost-visibility slice, built to actually run — and is now
+open-sourced so anyone can get a usage/cost dashboard for their AI projects with
+no hassle.
 
 ## Why
 

@@ -1,15 +1,21 @@
-AI Command Center SS/
+# Private, root-anchored so they don't match nested paths like site/app/docs/
+/AI Command Center SS/
+/Docs/
+/pyproject.toml
+/main.py
+/.python-version
+/.venv/
+/uv.lock
+
 .env
-.venv/
 __pycache__/
-Docs/
+*.egg-info/
 .DS_Store
 node_modules/
-*.egg-info/
-dist/
 aicc.config.json
 
 # site build
 site/node_modules/
 site/.next/
 site/.vercel/
+site/out/

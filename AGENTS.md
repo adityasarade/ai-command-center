@@ -20,7 +20,7 @@ packages/gateway/        the npm package `ai-command-center`
   src/providers.js       provider registry + proxy-path parsing
   src/usage.js           per-schema token-usage extraction (openai/anthropic/gemini)
   src/pricing.js         cost engine (longest-prefix model match)
-  src/pricing/pricing.json  USD-per-1M-token table
+  pricing/pricing.json   USD-per-1M-token table (sibling of src/)
   src/stats.js           aggregation for the dashboard/API
   src/store.js           append-only JSONL persistence
   src/fx.js              currency exchange rates
