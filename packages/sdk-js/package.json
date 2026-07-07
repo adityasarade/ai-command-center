@@ -1,0 +1,26 @@
+{
+  "name": "@ai-command-center/sdk",
+  "version": "0.1.0",
+  "description": "Thin helper that routes your OpenAI/Anthropic/Gemini SDK calls through an AI Command Center gateway.",
+  "type": "module",
+  "main": "index.cjs",
+  "exports": {
+    "import": "./index.mjs",
+    "require": "./index.cjs"
+  },
+  "files": [
+    "index.mjs",
+    "index.cjs"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "keywords": [
+    "llm",
+    "observability",
+    "cost-tracking",
+    "openai",
+    "anthropic"
+  ],
+  "license": "MIT"
+}
