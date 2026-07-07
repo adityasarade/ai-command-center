@@ -79,6 +79,7 @@ dashboard.
 <tr><td>
 
 **Python**
+
 ```python
 from openai import OpenAI
 client = OpenAI(base_url=
@@ -92,10 +93,11 @@ client = Anthropic(base_url=
 </td><td>
 
 **JavaScript / Java / anything**
+
 ```js
-new OpenAI({ baseURL:
-  "http://localhost:4321/p/app/openai/v1" });
+new OpenAI({ baseURL: 'http://localhost:4321/p/app/openai/v1' });
 ```
+
 ```bash
 # zero code change - SDKs read this
 export OPENAI_BASE_URL=\
@@ -123,9 +125,9 @@ database. It is **not** a tracing platform, an eval framework, a prompt manager,
 or a routing/failover gateway - tools like Langfuse, Helicone, LangSmith,
 LiteLLM, and Portkey do far more on those axes. If you need them, use them.
 
-Reach for this when the question is simply *"how many tokens and dollars is each
+Reach for this when the question is simply _"how many tokens and dollars is each
 project spending, across many providers and languages, without shipping prompt
-content anywhere or running a database?"*
+content anywhere or running a database?"_
 
 Full, fact-checked comparison: **[docs/comparison](https://aicommandcenter.vercel.app/docs/comparison)**.
 
@@ -155,12 +157,12 @@ All optional - the defaults are sensible. See the docs for the full reference:
 
 The eval suite ([`evals/`](evals/), `npm run evals`, mock upstream - no keys, no network):
 
-| Metric | Result |
-|---|---|
-| Added proxy latency (p50) | **< 1 ms** (negligible vs 300 ms-30 s LLM calls) |
-| Cost accuracy | **0 mismatches** across 20 provider/model/token cases |
-| Usage-parser coverage | **100%** of provider response shapes (stream + non-stream) |
-| Gateway runtime dependencies | **0** |
+| Metric                       | Result                                                     |
+| ---------------------------- | ---------------------------------------------------------- |
+| Added proxy latency (p50)    | **< 1 ms** (negligible vs 300 ms-30 s LLM calls)           |
+| Cost accuracy                | **0 mismatches** across 20 provider/model/token cases      |
+| Usage-parser coverage        | **100%** of provider response shapes (stream + non-stream) |
+| Gateway runtime dependencies | **0**                                                      |
 
 Latest report: [`evals/REPORT.md`](evals/REPORT.md).
 

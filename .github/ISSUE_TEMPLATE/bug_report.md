@@ -20,6 +20,7 @@ npx ai-command-center ...
 What you expected instead.
 
 **Environment**
+
 - AI Command Center version: (`npx ai-command-center --version`)
 - Node version: (`node -v`)
 - OS:

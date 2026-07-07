@@ -12,10 +12,18 @@ export function Nav() {
           <b>ai-command-center</b>
         </Link>
         <div className="nav-links">
-          <Link href="/docs" className="hide-sm">Docs</Link>
-          <Link href="/docs/comparison" className="hide-sm">Comparison</Link>
-          <Link href="/docs/api" className="hide-sm">API</Link>
-          <a href={REPO} target="_blank" rel="noreferrer" className="nav-cta">GitHub ↗</a>
+          <Link href="/docs" className="hide-sm">
+            Docs
+          </Link>
+          <Link href="/docs/comparison" className="hide-sm">
+            Comparison
+          </Link>
+          <Link href="/docs/api" className="hide-sm">
+            API
+          </Link>
+          <a href={REPO} target="_blank" rel="noreferrer" className="nav-cta">
+            GitHub ↗
+          </a>
         </div>
       </div>
     </nav>

@@ -19,7 +19,9 @@ export function init({ project = 'default', key, gateway, check = true } = {}) {
   const gw = (gateway || process.env.AICC_GATEWAY || DEFAULT_GATEWAY).replace(/\/+$/, '');
   const gwKey = key || process.env.AICC_KEY || null;
   // With auth enabled the gateway key both authenticates and attributes the call.
-  const base = gwKey ? `${gw}/k/${encodeURIComponent(gwKey)}` : `${gw}/p/${encodeURIComponent(project)}`;
+  const base = gwKey
+    ? `${gw}/k/${encodeURIComponent(gwKey)}`
+    : `${gw}/p/${encodeURIComponent(project)}`;
 
   process.env.OPENAI_BASE_URL = `${base}/openai/v1`;
   process.env.ANTHROPIC_BASE_URL = `${base}/anthropic`;

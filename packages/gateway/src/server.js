@@ -76,7 +76,10 @@ export function createGateway(config) {
       const mutating = req.method !== 'GET' && req.method !== 'HEAD';
       if (mutating && untrustedCrossOrigin(req, config)) {
         return respondJson(res, 403, {
-          error: { message: 'cross-origin request blocked. Add your web app origin to config.allowedOrigins to permit browser calls.' },
+          error: {
+            message:
+              'cross-origin request blocked. Add your web app origin to config.allowedOrigins to permit browser calls.',
+          },
         });
       }
 
@@ -84,7 +87,10 @@ export function createGateway(config) {
       if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
         return serveStatic(res, 'index.html');
       }
-      if (req.method === 'GET' && /^\/(app\.js|style\.css|logo\.svg|llms\.txt|vendor\/chart\.umd\.js)$/.test(pathname)) {
+      if (
+        req.method === 'GET' &&
+        /^\/(app\.js|style\.css|logo\.svg|llms\.txt|vendor\/chart\.umd\.js)$/.test(pathname)
+      ) {
         return serveStatic(res, pathname.slice(1));
       }
       if (pathname === '/health') {
@@ -117,7 +123,8 @@ export function createGateway(config) {
         }
         const isAdmin = !auth.locked || user?.role === 'admin';
         const allowed = auth.allowedProjects(user); // null = all projects
-        const visible = allowed == null ? store.records : store.records.filter((r) => allowed.has(r.project));
+        const visible =
+          allowed == null ? store.records : store.records.filter((r) => allowed.has(r.project));
 
         if (pathname === '/api/meta') {
           return respondJson(res, 200, {
@@ -168,7 +175,10 @@ export function createGateway(config) {
           const forcedProject = trackKeyProject?.name || null;
           if (auth.locked && !forcedProject && !isAdmin) {
             return respondJson(res, 401, {
-              error: { message: 'send a valid x-aicc-key header (dashboard → settings → projects) or log in as admin' },
+              error: {
+                message:
+                  'send a valid x-aicc-key header (dashboard → settings → projects) or log in as admin',
+              },
             });
           }
           return handleTrack(req, res, { store, pricing, forcedProject });
@@ -212,7 +222,10 @@ export function createGateway(config) {
         // malicious page can't spend the operator's keys via the proxy.
         if (untrustedCrossOrigin(req, config)) {
           return respondJson(res, 403, {
-            error: { message: 'cross-origin proxy request blocked. Add your web app origin to config.allowedOrigins to permit browser calls.' },
+            error: {
+              message:
+                'cross-origin proxy request blocked. Add your web app origin to config.allowedOrigins to permit browser calls.',
+            },
           });
         }
         route.untrustedOrigin = false;
@@ -273,10 +286,16 @@ async function handleAuthRoutes(req, res, pathname, { auth, config }) {
   }
   const secure = req.headers['x-forwarded-proto'] === 'https';
   if (pathname === '/api/auth/setup' && req.method === 'POST') {
-    if (auth.disabled) return respondJson(res, 400, { error: { message: 'auth is disabled (--no-auth)' } });
-    if (auth.db.users.length > 0) return respondJson(res, 403, { error: { message: 'setup already completed' } });
+    if (auth.disabled)
+      return respondJson(res, 400, { error: { message: 'auth is disabled (--no-auth)' } });
+    if (auth.db.users.length > 0)
+      return respondJson(res, 403, { error: { message: 'setup already completed' } });
     const body = await jsonBody(req);
-    const user = await auth.createUser({ username: body.username, password: body.password, role: 'admin' });
+    const user = await auth.createUser({
+      username: body.username,
+      password: body.password,
+      role: 'admin',
+    });
     res.setHeader('set-cookie', auth.issueSessionCookie(user, { secure }));
     return respondJson(res, 200, { user });
   }

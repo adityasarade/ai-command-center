@@ -106,7 +106,15 @@ export function computeStats(allRecords, query = {}) {
 function bump(map, key, r, cost) {
   let agg = map.get(key);
   if (!agg) {
-    agg = { requests: 0, errors: 0, costUsd: 0, tokensIn: 0, tokensOut: 0, lastTs: 0, models: new Map() };
+    agg = {
+      requests: 0,
+      errors: 0,
+      costUsd: 0,
+      tokensIn: 0,
+      tokensOut: 0,
+      lastTs: 0,
+      models: new Map(),
+    };
     map.set(key, agg);
   }
   agg.requests += 1;
@@ -122,7 +130,7 @@ function finalize(map, keyName) {
   return [...map.entries()]
     .map(([key, agg]) => {
       const topModel = [...agg.models.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-      const { models, ...rest } = agg;
+      const { models: _models, ...rest } = agg;
       return { [keyName]: key, ...rest, topModel, tokens: agg.tokensIn + agg.tokensOut };
     })
     .sort((a, b) => b.costUsd - a.costUsd || b.requests - a.requests);
@@ -138,7 +146,15 @@ function bucketize(records, from, to) {
   const floorBucket = hourly
     ? (ts) => Math.floor(ts / size) * size
     : (ts) => new Date(ts).setHours(0, 0, 0, 0);
-  const mk = (t) => ({ t, requests: 0, errors: 0, costUsd: 0, tokensIn: 0, tokensOut: 0, byProject: {} });
+  const mk = (t) => ({
+    t,
+    requests: 0,
+    errors: 0,
+    costUsd: 0,
+    tokensIn: 0,
+    tokensOut: 0,
+    byProject: {},
+  });
   const buckets = new Map();
   if (hourly) {
     for (let t = floorBucket(from); t <= to; t += size) buckets.set(t, mk(t));

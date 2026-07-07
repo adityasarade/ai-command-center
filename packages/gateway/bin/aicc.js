@@ -82,7 +82,9 @@ async function cmdStart() {
 
   const brand = config.branding || {};
   console.log('');
-  console.log(`  ${bold(cyan('◆ ' + (brand.name || 'AI Command Center')))} ${dim('v' + PKG.version)}`);
+  console.log(
+    `  ${bold(cyan('◆ ' + (brand.name || 'AI Command Center')))} ${dim('v' + PKG.version)}`,
+  );
   console.log(`  ${dim(brand.tagline || 'One gateway, every AI project, one dashboard.')}`);
   console.log('');
   const auth = gateway.auth;
@@ -97,11 +99,15 @@ async function cmdStart() {
   console.log(`  ${bold('Records')}     ${dim(String(gateway.store.records.length))}`);
   console.log('');
   if (auth.locked) {
-    console.log(`  ${bold('Point your app at the gateway')} ${dim('(auth is on: URLs carry your project key)')}`);
+    console.log(
+      `  ${bold('Point your app at the gateway')} ${dim('(auth is on: URLs carry your project key)')}`,
+    );
     console.log(`    OpenAI      ${cyan(`${url}/k/<gateway-key>/openai/v1`)}`);
     console.log(`    Anthropic   ${cyan(`${url}/k/<gateway-key>/anthropic`)}`);
     console.log(`    Gemini      ${cyan(`${url}/k/<gateway-key>/gemini`)}`);
-    console.log(`    ${dim('keys live in dashboard → settings → projects, or:')} ${bold('npx ai-command-center snippets --project <name>')}`);
+    console.log(
+      `    ${dim('keys live in dashboard → settings → projects, or:')} ${bold('npx ai-command-center snippets --project <name>')}`,
+    );
   } else {
     console.log(`  ${bold('Point your app at the gateway')} ${dim('(pick your provider)')}`);
     console.log(`    OpenAI      ${cyan(`${url}/p/<project>/openai/v1`)}`);
@@ -186,12 +192,17 @@ async function cmdStats() {
     const res = await fetch(`${live}/api/stats?range=${range}`);
     if (!res.ok) throw new Error(`gateway error: HTTP ${res.status}`);
     stats = await res.json();
-    fx = await fetch(`${live}/api/fx`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    fx = await fetch(`${live}/api/fx`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
   } else {
     const store = new Store(config.dataDir).init();
     stats = computeStats(store.records, { range });
   }
-  fx ??= { ...new FxService(config.dataDir, config.currency).get(), default: config.currency.default };
+  fx ??= {
+    ...new FxService(config.dataDir, config.currency).get(),
+    default: config.currency.default,
+  };
   if (flags.json) {
     console.log(JSON.stringify({ ...stats, fx }, null, 2));
     return;
@@ -203,10 +214,15 @@ async function cmdStats() {
   console.log('');
   console.log(`  ${bold(cyan('AI Command Center'))} ${dim(`- last ${range}`)}`);
   console.log('');
-  const usdNote = code !== 'USD' ? dim(` (≈ ${fmtUsd(t.costUsd)}${fx.stale ? ', approx fx' : ''})`) : '';
+  const usdNote =
+    code !== 'USD' ? dim(` (≈ ${fmtUsd(t.costUsd)}${fx.stale ? ', approx fx' : ''})`) : '';
   console.log(`  Spend        ${bold(money(t.costUsd))}${usdNote}`);
-  console.log(`  Requests     ${bold(String(t.requests))} ${t.errors ? red(`(${t.errors} errors)`) : ''}`);
-  console.log(`  Tokens       ${bold(fmtNum(t.tokens))} ${dim(`(${fmtNum(t.tokensIn)} in / ${fmtNum(t.tokensOut)} out)`)}`);
+  console.log(
+    `  Requests     ${bold(String(t.requests))} ${t.errors ? red(`(${t.errors} errors)`) : ''}`,
+  );
+  console.log(
+    `  Tokens       ${bold(fmtNum(t.tokens))} ${dim(`(${fmtNum(t.tokensIn)} in / ${fmtNum(t.tokensOut)} out)`)}`,
+  );
   console.log(`  Latency      p50 ${t.p50LatencyMs}ms · p95 ${t.p95LatencyMs}ms`);
   console.log('');
   if (stats.byProject.length) {
@@ -219,7 +235,9 @@ async function cmdStats() {
     console.log('');
   }
   if (t.unpriced > 0) {
-    console.log(yellow(`  ⚠ ${t.unpriced} requests used models with no pricing entry (cost shown as 0).`));
+    console.log(
+      yellow(`  ⚠ ${t.unpriced} requests used models with no pricing entry (cost shown as 0).`),
+    );
     console.log(dim('    Add prices via the "pricing" key in your aicc config.\n'));
   }
 }
@@ -254,7 +272,9 @@ async function cmdUser() {
   const action = positional[1];
   if (action === 'add') {
     if (!flags.username || !flags.password) {
-      throw new Error('usage: aicc user add --username <name> --password <pass> [--role admin|member]');
+      throw new Error(
+        'usage: aicc user add --username <name> --password <pass> [--role admin|member]',
+      );
     }
     const user = await auth.createUser({
       username: flags.username,
@@ -272,10 +292,14 @@ async function cmdUser() {
     }
     for (const u of auth.db.users) {
       const pu = auth.publicUser(u);
-      console.log(`  ${pu.username.padEnd(24)} ${pu.role.padEnd(8)} ${dim(pu.teamName || '(no team)')}`);
+      console.log(
+        `  ${pu.username.padEnd(24)} ${pu.role.padEnd(8)} ${dim(pu.teamName || '(no team)')}`,
+      );
     }
   } else {
-    throw new Error('usage: aicc user <add|list> - user management lives in the dashboard (settings)');
+    throw new Error(
+      'usage: aicc user <add|list> - user management lives in the dashboard (settings)',
+    );
   }
 }
 
@@ -419,7 +443,9 @@ ${b('Anything else (batch jobs, unsupported providers)')} ${d('- report usage di
 ${
   keyed
     ? d('The gateway key in the URL both authenticates the call and assigns it to your project.')
-    : d(`Replace "${project}" with your project name - that's how calls are grouped on the dashboard.`) +
+    : d(
+        `Replace "${project}" with your project name - that's how calls are grouped on the dashboard.`,
+      ) +
       '\n' +
       d('Alternative to path prefix: send header  x-aicc-project: ' + project)
 }

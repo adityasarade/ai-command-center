@@ -1,0 +1,10 @@
+node_modules
+site/.next
+site/out
+**/.vercel
+packages/gateway/public/vendor
+assets
+site/public/dashboard.svg
+CHANGELOG.md
+evals/REPORT.md
+package-lock.json

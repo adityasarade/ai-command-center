@@ -1,11 +1,6 @@
 import crypto from 'node:crypto';
 import { centralKey } from './providers.js';
-import {
-  SseParser,
-  extractFromJson,
-  makeStreamAccumulator,
-  modelFromRequest,
-} from './usage.js';
+import { SseParser, extractFromJson, makeStreamAccumulator, modelFromRequest } from './usage.js';
 
 const MAX_REQUEST_BODY = 50 * 1024 * 1024;
 const MAX_PARSE_BUFFER = 20 * 1024 * 1024; // JSON bodies larger than this are piped but not parsed
@@ -112,7 +107,10 @@ export function createProxyHandler({ table, config, pricing, store }) {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(new Error('upstream timeout')), UPSTREAM_TIMEOUT_MS);
+    const timeout = setTimeout(
+      () => controller.abort(new Error('upstream timeout')),
+      UPSTREAM_TIMEOUT_MS,
+    );
     let clientClosed = false;
     res.on('close', () => {
       if (!res.writableEnded) {
@@ -161,7 +159,9 @@ export function createProxyHandler({ table, config, pricing, store }) {
       });
       if (!clientClosed && !res.headersSent) {
         respondJson(res, 502, {
-          error: { message: `AI Command Center gateway could not reach ${provider.id} (${upstreamUrl}): ${err.message}` },
+          error: {
+            message: `AI Command Center gateway could not reach ${provider.id} (${upstreamUrl}): ${err.message}`,
+          },
         });
       } else {
         res.destroy();
@@ -292,9 +292,28 @@ export function createProxyHandler({ table, config, pricing, store }) {
   };
 }
 
-function finishRecord({ base, status, ok, ttfbMs, latencyMs, usage, respModel, errorType, errorMessage, provider, pricing, store }) {
+function finishRecord({
+  base,
+  status,
+  ok,
+  ttfbMs,
+  latencyMs,
+  usage,
+  respModel,
+  errorType,
+  errorMessage,
+  provider,
+  pricing,
+  store,
+}) {
   const model = respModel || base.model;
-  let tokens = { tokensIn: null, tokensOut: null, cacheRead: null, cacheWrite: null, tokensTotal: null };
+  let tokens = {
+    tokensIn: null,
+    tokensOut: null,
+    cacheRead: null,
+    cacheWrite: null,
+    tokensTotal: null,
+  };
   let costUsd = null;
   let priced = null;
   if (usage) {
@@ -348,7 +367,11 @@ function makeInjectedUsageRelay(onData) {
     }
   };
   const isUsageOnly = (obj) =>
-    obj && typeof obj === 'object' && Array.isArray(obj.choices) && obj.choices.length === 0 && obj.usage != null;
+    obj &&
+    typeof obj === 'object' &&
+    Array.isArray(obj.choices) &&
+    obj.choices.length === 0 &&
+    obj.usage != null;
   return {
     feed(text) {
       buf += text;
@@ -378,10 +401,7 @@ function extractErrorMessage(text) {
   try {
     const obj = JSON.parse(text);
     return (
-      obj?.error?.message ||
-      obj?.message ||
-      (Array.isArray(obj) && obj[0]?.error?.message) ||
-      null
+      obj?.error?.message || obj?.message || (Array.isArray(obj) && obj[0]?.error?.message) || null
     );
   } catch {
     return text.slice(0, 200);

@@ -24,7 +24,9 @@ export function startMockUpstream() {
     // ---- forced failure ----
     if (body?.model === 'fail-me' || url.pathname.includes('fail500')) {
       res.writeHead(500, { 'content-type': 'application/json' });
-      return res.end(JSON.stringify({ error: { message: 'mock upstream exploded', type: 'server_error' } }));
+      return res.end(
+        JSON.stringify({ error: { message: 'mock upstream exploded', type: 'server_error' } }),
+      );
     }
 
     // ---- OpenAI chat completions ----
@@ -40,7 +42,11 @@ export function startMockUpstream() {
             id: 'c1',
             model,
             choices: [],
-            usage: { prompt_tokens: 120, completion_tokens: 30, prompt_tokens_details: { cached_tokens: 20 } },
+            usage: {
+              prompt_tokens: 120,
+              completion_tokens: 30,
+              prompt_tokens_details: { cached_tokens: 20 },
+            },
           });
         }
         res.write('data: [DONE]\n\n');
@@ -52,7 +58,11 @@ export function startMockUpstream() {
           id: 'c1',
           model,
           choices: [{ message: { role: 'assistant', content: 'Hello' } }],
-          usage: { prompt_tokens: 120, completion_tokens: 30, prompt_tokens_details: { cached_tokens: 20 } },
+          usage: {
+            prompt_tokens: 120,
+            completion_tokens: 30,
+            prompt_tokens_details: { cached_tokens: 20 },
+          },
         }),
       );
     }
@@ -81,11 +91,23 @@ export function startMockUpstream() {
           message: {
             id: 'm1',
             model,
-            usage: { input_tokens: 200, output_tokens: 1, cache_read_input_tokens: 100, cache_creation_input_tokens: 10 },
+            usage: {
+              input_tokens: 200,
+              output_tokens: 1,
+              cache_read_input_tokens: 100,
+              cache_creation_input_tokens: 10,
+            },
           },
         });
-        send('content_block_delta', { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hello' } });
-        send('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 45 } });
+        send('content_block_delta', {
+          type: 'content_block_delta',
+          delta: { type: 'text_delta', text: 'Hello' },
+        });
+        send('message_delta', {
+          type: 'message_delta',
+          delta: { stop_reason: 'end_turn' },
+          usage: { output_tokens: 45 },
+        });
         send('message_stop', { type: 'message_stop' });
         return res.end();
       }
@@ -95,7 +117,12 @@ export function startMockUpstream() {
           id: 'm1',
           model,
           content: [{ type: 'text', text: 'Hello' }],
-          usage: { input_tokens: 200, output_tokens: 45, cache_read_input_tokens: 100, cache_creation_input_tokens: 10 },
+          usage: {
+            input_tokens: 200,
+            output_tokens: 45,
+            cache_read_input_tokens: 100,
+            cache_creation_input_tokens: 10,
+          },
         }),
       );
     }
@@ -114,7 +141,12 @@ export function startMockUpstream() {
         });
         send({
           candidates: [{ content: { parts: [{ text: 'lo' }] } }],
-          usageMetadata: { promptTokenCount: 300, candidatesTokenCount: 80, thoughtsTokenCount: 15, totalTokenCount: 395 },
+          usageMetadata: {
+            promptTokenCount: 300,
+            candidatesTokenCount: 80,
+            thoughtsTokenCount: 15,
+            totalTokenCount: 395,
+          },
           modelVersion: model,
         });
         return res.end();

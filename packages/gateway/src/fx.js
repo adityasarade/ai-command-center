@@ -87,7 +87,9 @@ export class FxService {
     ];
     for (const attempt of attempts) {
       try {
-        const res = await this.fetchImpl(attempt.url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+        const res = await this.fetchImpl(attempt.url, {
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
         if (!res.ok) continue;
         const rates = attempt.pick(await res.json());
         if (!rates) continue;

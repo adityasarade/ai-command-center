@@ -12,7 +12,11 @@ test('crash-truncated JSONL: partial trailing line is repaired, next append surv
   fs.writeFileSync(file, JSON.stringify({ id: 'a', ts: 1 }) + '\n' + '{"id":"partial","ts');
 
   const s1 = new Store(dir).init();
-  assert.deepEqual(s1.records.map((r) => r.id), ['a'], 'partial line skipped on load');
+  assert.deepEqual(
+    s1.records.map((r) => r.id),
+    ['a'],
+    'partial line skipped on load',
+  );
   s1.append({ id: 'c', ts: 3 });
   await s1.flush();
 
@@ -29,7 +33,13 @@ test('clear(simulatedOnly) keeps real records', async () => {
   const removed = s.clear({ simulatedOnly: true });
   await s.flush();
   assert.equal(removed, 1);
-  assert.deepEqual(s.records.map((r) => r.id), ['real']);
+  assert.deepEqual(
+    s.records.map((r) => r.id),
+    ['real'],
+  );
   const reloaded = new Store(dir).init();
-  assert.deepEqual(reloaded.records.map((r) => r.id), ['real']);
+  assert.deepEqual(
+    reloaded.records.map((r) => r.id),
+    ['real'],
+  );
 });

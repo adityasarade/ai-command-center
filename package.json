@@ -1,6 +1,7 @@
 {
   "name": "ai-command-center-monorepo",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "description": "AI Command Center - plug-and-play LLM gateway + consolidated usage/cost dashboard for all your AI projects, in any language.",
   "license": "MIT",
@@ -18,6 +19,19 @@
     "start": "node packages/gateway/bin/aicc.js start",
     "demo": "node packages/gateway/bin/aicc.js demo",
     "test": "node --test \"packages/gateway/test/*.test.js\"",
-    "evals": "node evals/run.js"
+    "evals": "node evals/run.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.4"
   }
 }

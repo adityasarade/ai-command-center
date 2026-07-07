@@ -1,12 +1,20 @@
 /* AI Command Center dashboard */
-/* global Chart */
 (() => {
   'use strict';
 
   const $ = (id) => document.getElementById(id);
 
   // ------------------------------------------------------------ palette
-  const SERIES = ['#3987e5', '#199e70', '#c98500', '#008300', '#9085e9', '#e66767', '#d55181', '#d95926'];
+  const SERIES = [
+    '#3987e5',
+    '#199e70',
+    '#c98500',
+    '#008300',
+    '#9085e9',
+    '#e66767',
+    '#d55181',
+    '#d95926',
+  ];
   const OTHER_COLOR = '#6b6a66';
   const CRITICAL = '#d03b3b';
   const INK2 = '#c3c2b7';
@@ -82,9 +90,15 @@
     if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + 'k';
     return String(v);
   };
-  const fmtMs = (v) => (v == null ? '-' : v >= 10000 ? (v / 1000).toFixed(1) + 's' : Math.round(v) + 'ms');
+  const fmtMs = (v) =>
+    v == null ? '-' : v >= 10000 ? (v / 1000).toFixed(1) + 's' : Math.round(v) + 'ms';
   const fmtClock = (ts) =>
-    new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    new Date(ts).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
   const fmtBucket = (ts, bucketMs) => {
     const d = new Date(ts);
     if (bucketMs < 24 * 3600e3) {
@@ -95,11 +109,20 @@
   const fmtBucketFull = (ts, bucketMs) => {
     const d = new Date(ts);
     return bucketMs < 24 * 3600e3
-      ? d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+      ? d.toLocaleString([], {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
       : d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   };
   const esc = (s) =>
-    String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    String(s ?? '').replace(
+      /[&<>"']/g,
+      (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch],
+    );
 
   async function api(path) {
     const res = await fetch(path);
@@ -157,7 +180,8 @@
       state.cur && state.cur !== 'USD'
         ? ` <span class="t-dim">≈ ${fmtUsdPlain(t.costUsd)}${state.fx?.stale ? ' · approx fx' : ''}</span>`
         : '';
-    $('tSpendSub').innerHTML = deltaHtml(t.costUsd, prev?.totals?.costUsd, { moreIsBad: true }) + fxNote;
+    $('tSpendSub').innerHTML =
+      deltaHtml(t.costUsd, prev?.totals?.costUsd, { moreIsBad: true }) + fxNote;
     $('tReqs').textContent = fmtNum(t.requests);
     $('tReqsSub').innerHTML = t.errors
       ? `<span class="err-count">${fmtNum(t.errors)} errors (${(t.errorRate * 100).toFixed(1)}%)</span>`
@@ -167,7 +191,8 @@
     $('tLatency').textContent = fmtMs(t.p50LatencyMs);
     $('tLatencySub').textContent = `p95 ${fmtMs(t.p95LatencyMs)}`;
     $('tProjects').textContent = String(stats.byProject.length);
-    $('tProjectsSub').textContent = `${stats.byModel.length} models · ${stats.byProvider.length} providers`;
+    $('tProjectsSub').textContent =
+      `${stats.byModel.length} models · ${stats.byProvider.length} providers`;
   }
 
   function renderCurSeg() {
@@ -182,11 +207,18 @@
   }
 
   function deltaHtml(cur, prevVal, { moreIsBad }) {
-    if (prevVal == null || prevVal === 0 || cur == null) return '<span class="t-dim">vs prev period: -</span>';
+    if (prevVal == null || prevVal === 0 || cur == null)
+      return '<span class="t-dim">vs prev period: -</span>';
     const pct = ((cur - prevVal) / prevVal) * 100;
     if (!Number.isFinite(pct)) return '<span class="t-dim">vs prev period: -</span>';
     const up = pct >= 0;
-    const cls = up ? (moreIsBad ? 'delta-up' : 'delta-up good') : moreIsBad ? 'delta-down' : 't-dim';
+    const cls = up
+      ? moreIsBad
+        ? 'delta-up'
+        : 'delta-up good'
+      : moreIsBad
+        ? 'delta-down'
+        : 't-dim';
     return `<span class="${cls}">${up ? '▲' : '▼'} ${Math.abs(pct).toFixed(0)}%</span> <span class="t-dim">vs prev period</span>`;
   }
 
@@ -196,7 +228,8 @@
     // Top 7 projects by cost in window + Other.
     const totals = new Map();
     for (const p of points) {
-      for (const [name, v] of Object.entries(p.byProject)) totals.set(name, (totals.get(name) || 0) + v);
+      for (const [name, v] of Object.entries(p.byProject))
+        totals.set(name, (totals.get(name) || 0) + v);
     }
     const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
     const top = ranked.slice(0, 7);
@@ -232,14 +265,24 @@
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
-          x: { stacked: true, grid: { display: false }, ticks: { maxTicksLimit: 12, maxRotation: 0 } },
-          y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => fmtMoney(v), maxTicksLimit: 6 }, border: { display: false } },
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { maxTicksLimit: 12, maxRotation: 0 },
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: { callback: (v) => fmtMoney(v), maxTicksLimit: 6 },
+            border: { display: false },
+          },
         },
         plugins: {
           legend: { position: 'bottom', labels: { padding: 14 } },
           tooltip: {
             callbacks: {
-              title: (items) => (items.length ? fmtBucketFull(points[items[0].dataIndex].t, bucketMs) : ''),
+              title: (items) =>
+                items.length ? fmtBucketFull(points[items[0].dataIndex].t, bucketMs) : '',
               label: (item) => ` ${item.dataset.label}: ${fmtMoney(item.parsed.y)}`,
               footer: (items) => 'total ' + fmtMoney(items.reduce((s, i) => s + i.parsed.y, 0)),
             },
@@ -255,12 +298,14 @@
       type: 'bar',
       data: {
         labels: rows.map((r) => r.project),
-        datasets: [{
-          data: rows.map((r) => r.costUsd),
-          backgroundColor: rows.map((r) => projectColor(r.project)),
-          borderRadius: 3,
-          barPercentage: 0.72,
-        }],
+        datasets: [
+          {
+            data: rows.map((r) => r.costUsd),
+            backgroundColor: rows.map((r) => projectColor(r.project)),
+            borderRadius: 3,
+            barPercentage: 0.72,
+          },
+        ],
       },
       options: {
         indexAxis: 'y',
@@ -269,7 +314,11 @@
         layout: { padding: { right: 58 } },
         scales: {
           x: { display: false, beginAtZero: true },
-          y: { grid: { display: false }, border: { display: false }, ticks: { color: INK2, autoSkip: false } },
+          y: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: { color: INK2, autoSkip: false },
+          },
         },
         plugins: {
           legend: { display: false },
@@ -293,12 +342,14 @@
       type: 'bar',
       data: {
         labels: rows.map((r) => (r.model.length > 24 ? r.model.slice(0, 23) + '…' : r.model)),
-        datasets: [{
-          data: rows.map((r) => r.costUsd),
-          backgroundColor: '#256abf',
-          borderRadius: 3,
-          barPercentage: 0.72,
-        }],
+        datasets: [
+          {
+            data: rows.map((r) => r.costUsd),
+            backgroundColor: '#256abf',
+            borderRadius: 3,
+            barPercentage: 0.72,
+          },
+        ],
       },
       options: {
         indexAxis: 'y',
@@ -307,7 +358,11 @@
         layout: { padding: { right: 58 } },
         scales: {
           x: { display: false, beginAtZero: true },
-          y: { grid: { display: false }, border: { display: false }, ticks: { color: INK2, autoSkip: false, font: { size: 10 } } },
+          y: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: { color: INK2, autoSkip: false, font: { size: 10 } },
+          },
         },
         plugins: {
           legend: { display: false },
@@ -358,13 +413,18 @@
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } },
-          y: { beginAtZero: true, ticks: { maxTicksLimit: 5, precision: 0 }, border: { display: false } },
+          y: {
+            beginAtZero: true,
+            ticks: { maxTicksLimit: 5, precision: 0 },
+            border: { display: false },
+          },
         },
         plugins: {
           legend: { position: 'bottom', labels: { padding: 14 } },
           tooltip: {
             callbacks: {
-              title: (items) => (items.length ? fmtBucketFull(points[items[0].dataIndex].t, bucketMs) : ''),
+              title: (items) =>
+                items.length ? fmtBucketFull(points[items[0].dataIndex].t, bucketMs) : '',
             },
           },
         },
@@ -375,16 +435,17 @@
   function renderProviders(stats) {
     const box = $('providerList');
     const max = Math.max(...stats.byProvider.map((r) => r.costUsd), 0.000001);
-    box.innerHTML = stats.byProvider
-      .map(
-        (r) => `
+    box.innerHTML =
+      stats.byProvider
+        .map(
+          (r) => `
       <div class="provider-row">
         <span class="provider-name" title="${esc(r.provider)}">${esc(r.provider)}</span>
         <span class="provider-bar"><i style="width:${Math.max(2, (r.costUsd / max) * 100)}%"></i></span>
         <span class="provider-val">${fmtMoney(r.costUsd)} · ${fmtNum(r.requests)}</span>
       </div>`,
-      )
-      .join('') || '<div class="feed-empty">No traffic in range.</div>';
+        )
+        .join('') || '<div class="feed-empty">No traffic in range.</div>';
   }
 
   function rowHtml(r) {
@@ -441,7 +502,8 @@
     const unpriced = stats.totals.unpriced;
     const chipU = $('unpricedChip');
     chipU.hidden = !unpriced;
-    if (unpriced) chipU.textContent = `⚠ ${unpriced} calls on unpriced models - add rates in config`;
+    if (unpriced)
+      chipU.textContent = `⚠ ${unpriced} calls on unpriced models - add rates in config`;
     const chipD = $('demoChip');
     chipD.hidden = !stats.totals.simulated;
     if (stats.totals.simulated) {
@@ -475,7 +537,8 @@
     const box = $('userBox');
     if (auth.user) {
       box.hidden = false;
-      $('userName').innerHTML = `${esc(auth.user.username)}<span class="role">${esc(auth.user.role)}</span>`;
+      $('userName').innerHTML =
+        `${esc(auth.user.username)}<span class="role">${esc(auth.user.role)}</span>`;
       $('settingsBtn').hidden = auth.user.role !== 'admin';
     } else {
       box.hidden = true;
@@ -499,7 +562,11 @@
     $('gateForm').dataset.mode = mode;
     $('gatePass').autocomplete = setup ? 'new-password' : 'current-password';
     $('gateError').hidden = true;
-    $('gateCancelWrap').hidden = !(setup && !auth.needsSetup ? false : setup && auth.needsSetup ? true : false);
+    $('gateCancelWrap').hidden = !(setup && !auth.needsSetup
+      ? false
+      : setup && auth.needsSetup
+        ? true
+        : false);
     // Show cancel only for a setup opened voluntarily (admin already exists is impossible here); keep simple:
     $('gateCancelWrap').hidden = true;
     $('gateUser').focus();
@@ -561,7 +628,10 @@
 
       // Previous window for deltas (same span, immediately before).
       const span = stats.to - stats.from;
-      const prevQ = new URLSearchParams({ from: String(stats.from - span), to: String(stats.from) });
+      const prevQ = new URLSearchParams({
+        from: String(stats.from - span),
+        to: String(stats.from),
+      });
       if (state.project) prevQ.set('project', state.project);
       const prev = state.range === 'all' ? null : await api('/api/stats?' + prevQ);
       if (seq !== loadSeq) return;
@@ -596,7 +666,12 @@
     const current = state.project;
     sel.innerHTML =
       '<option value="">All projects</option>' +
-      projects.map((p) => `<option value="${esc(p.project)}"${p.project === current ? ' selected' : ''}>${esc(p.project)}</option>`).join('');
+      projects
+        .map(
+          (p) =>
+            `<option value="${esc(p.project)}"${p.project === current ? ' selected' : ''}>${esc(p.project)}</option>`,
+        )
+        .join('');
   }
 
   function scheduleRefresh() {
@@ -682,7 +757,10 @@
     const errEl = $('gateError');
     errEl.hidden = true;
     try {
-      await apiSend('POST', mode === 'setup' ? '/api/auth/setup' : '/api/auth/login', { username, password });
+      await apiSend('POST', mode === 'setup' ? '/api/auth/setup' : '/api/auth/login', {
+        username,
+        password,
+      });
       $('gatePass').value = '';
       await loadAll(true);
       connectSse();
@@ -726,7 +804,12 @@
     }
     const teamOpts = (sel) =>
       '<option value="">- no team -</option>' +
-      data.teams.map((t) => `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
+      data.teams
+        .map(
+          (t) =>
+            `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.name)}</option>`,
+        )
+        .join('');
 
     // Projects + gateway keys
     $('adminProjects').innerHTML = `
@@ -836,15 +919,35 @@
       t.textContent = 'copied!';
       setTimeout(() => (t.textContent = prev), 1000);
     } else if (t.id === 'npAdd') {
-      await act(() => apiSend('POST', '/api/admin/projects', { name: $('npName').value.trim(), teamId: $('npTeam').value }), 'npErr');
+      await act(
+        () =>
+          apiSend('POST', '/api/admin/projects', {
+            name: $('npName').value.trim(),
+            teamId: $('npTeam').value,
+          }),
+        'npErr',
+      );
     } else if (t.dataset.rotate) {
-      if (confirm(`Rotate key for "${t.dataset.rotate}"? Apps using the old key will stop working.`))
-        await act(() => apiSend('POST', `/api/admin/projects/${encodeURIComponent(t.dataset.rotate)}/rotate`));
+      if (
+        confirm(`Rotate key for "${t.dataset.rotate}"? Apps using the old key will stop working.`)
+      )
+        await act(() =>
+          apiSend('POST', `/api/admin/projects/${encodeURIComponent(t.dataset.rotate)}/rotate`),
+        );
     } else if (t.dataset.delProject) {
-      if (confirm(`Delete project "${t.dataset.delProject}"? Its records stay but the key stops working.`))
-        await act(() => apiSend('DELETE', `/api/admin/projects/${encodeURIComponent(t.dataset.delProject)}`));
+      if (
+        confirm(
+          `Delete project "${t.dataset.delProject}"? Its records stay but the key stops working.`,
+        )
+      )
+        await act(() =>
+          apiSend('DELETE', `/api/admin/projects/${encodeURIComponent(t.dataset.delProject)}`),
+        );
     } else if (t.id === 'ntAdd') {
-      await act(() => apiSend('POST', '/api/admin/teams', { name: $('ntName').value.trim() }), 'ntErr');
+      await act(
+        () => apiSend('POST', '/api/admin/teams', { name: $('ntName').value.trim() }),
+        'ntErr',
+      );
     } else if (t.dataset.delTeam) {
       await act(() => apiSend('DELETE', `/api/admin/teams/${t.dataset.delTeam}`));
     } else if (t.id === 'nuAdd') {
@@ -859,7 +962,8 @@
         'nuErr',
       );
     } else if (t.dataset.delUser) {
-      if (confirm('Delete this user?')) await act(() => apiSend('DELETE', `/api/admin/users/${t.dataset.delUser}`));
+      if (confirm('Delete this user?'))
+        await act(() => apiSend('DELETE', `/api/admin/users/${t.dataset.delUser}`));
     }
   });
 
@@ -867,7 +971,11 @@
     const t = ev.target;
     try {
       if (t.dataset.setProjectTeam) {
-        await apiSend('PATCH', `/api/admin/projects/${encodeURIComponent(t.dataset.setProjectTeam)}`, { teamId: t.value });
+        await apiSend(
+          'PATCH',
+          `/api/admin/projects/${encodeURIComponent(t.dataset.setProjectTeam)}`,
+          { teamId: t.value },
+        );
       } else if (t.dataset.setRole) {
         await apiSend('PATCH', `/api/admin/users/${t.dataset.setRole}`, { role: t.value });
       } else if (t.dataset.setUserTeam) {

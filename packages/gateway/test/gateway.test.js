@@ -19,7 +19,9 @@ function waitForRecords(n, timeoutMs = 3000) {
     (function poll() {
       if (store.records.length >= n) return resolve();
       if (Date.now() - t0 > timeoutMs) {
-        return reject(new Error(`timed out waiting for ${n} records (have ${store.records.length})`));
+        return reject(
+          new Error(`timed out waiting for ${n} records (have ${store.records.length})`),
+        );
       }
       setTimeout(poll, 15);
     })();
@@ -115,7 +117,10 @@ test('injected stream_options usage chunk is filtered from a client that did not
   const text = await res.text();
   assert.ok(text.includes('"Hel"') && text.includes('"lo"'), 'content chunks still relayed');
   assert.ok(text.includes('[DONE]'), 'DONE still relayed');
-  assert.ok(!/"choices"\s*:\s*\[\s*\]/.test(text), 'usage-only choices:[] chunk withheld from client');
+  assert.ok(
+    !/"choices"\s*:\s*\[\s*\]/.test(text),
+    'usage-only choices:[] chunk withheld from client',
+  );
   assert.ok(!text.includes('"completion_tokens"'), 'usage object not leaked to client');
   await waitForRecords(n + 1);
   const r = store.records.at(-1);
@@ -128,7 +133,12 @@ test('openai stream with caller-set stream_options is left untouched', async () 
   await fetch(`${base}/openai/v1/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ model: 'gpt-4o-mini', stream: true, stream_options: { include_usage: false }, messages: [] }),
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      stream: true,
+      stream_options: { include_usage: false },
+      messages: [],
+    }),
   });
   assert.equal(mock.state.last.body.stream_options.include_usage, false);
   await waitForRecords(n + 1);
@@ -175,7 +185,12 @@ test('anthropic stream: message_start + message_delta accumulate', async () => {
   const res = await fetch(`${base}/p/proj-a/anthropic/v1/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': 'sk-caller-anthropic' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 100, stream: true, messages: [] }),
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 100,
+      stream: true,
+      messages: [],
+    }),
   });
   await res.text();
   // caller's own key passes through untouched
@@ -190,11 +205,14 @@ test('anthropic stream: message_start + message_delta accumulate', async () => {
 
 test('gemini non-stream: usageMetadata mapped, model from URL, thinking tokens as output', async () => {
   const n = store.records.length;
-  const res = await fetch(`${base}/p/proj-c/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=g-key`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: 'hi' }] }] }),
-  });
+  const res = await fetch(
+    `${base}/p/proj-c/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=g-key`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: 'hi' }] }] }),
+    },
+  );
   assert.equal(res.status, 200);
   assert.equal(mock.state.last.search, '?key=g-key'); // query auth forwarded
   await waitForRecords(n + 1);
@@ -290,7 +308,13 @@ test('/api/track ingests external usage and prices it', async () => {
   const res = await fetch(`${base}/api/track`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ project: 'batch-job', provider: 'openai', model: 'gpt-4o', tokensIn: 1000, tokensOut: 100 }),
+    body: JSON.stringify({
+      project: 'batch-job',
+      provider: 'openai',
+      model: 'gpt-4o',
+      tokensIn: 1000,
+      tokensOut: 100,
+    }),
   });
   assert.equal(res.status, 200);
   await waitForRecords(n + 1);
@@ -305,7 +329,15 @@ test('/api/track with explicit null costUsd/latency is priced, not zeroed', asyn
   await fetch(`${base}/api/track`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ project: 'sdk', provider: 'openai', model: 'gpt-4o-mini', tokensIn: 1200, tokensOut: 300, costUsd: null, latencyMs: null }),
+    body: JSON.stringify({
+      project: 'sdk',
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      tokensIn: 1200,
+      tokensOut: 300,
+      costUsd: null,
+      latencyMs: null,
+    }),
   });
   await waitForRecords(n + 1);
   const r = store.records.at(-1);

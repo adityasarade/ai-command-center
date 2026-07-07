@@ -10,7 +10,11 @@ export function CodeTabs({ items }) {
     <div>
       <div className="tabs">
         {items.map((it, idx) => (
-          <button key={it.label} className={`tab ${idx === i ? 'on' : ''}`} onClick={() => setI(idx)}>
+          <button
+            key={it.label}
+            className={`tab ${idx === i ? 'on' : ''}`}
+            onClick={() => setI(idx)}
+          >
             {it.label}
           </button>
         ))}

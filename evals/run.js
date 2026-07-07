@@ -17,7 +17,6 @@
  *                        non-stream, all three schemas) the usage parser reads.
  */
 
-import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -68,8 +67,10 @@ async function main() {
   if (CI) {
     const fail = [];
     if (results.overhead.p95 > 25) fail.push(`proxy p95 overhead ${results.overhead.p95}ms > 25ms`);
-    if (results.costAccuracy.mismatches > 0) fail.push(`${results.costAccuracy.mismatches} cost mismatches`);
-    if (results.parserCoverage.rate < 1) fail.push(`parser coverage ${results.parserCoverage.rate}`);
+    if (results.costAccuracy.mismatches > 0)
+      fail.push(`${results.costAccuracy.mismatches} cost mismatches`);
+    if (results.parserCoverage.rate < 1)
+      fail.push(`parser coverage ${results.parserCoverage.rate}`);
     if (fail.length) {
       console.error('\nEVAL FAILURES:\n - ' + fail.join('\n - '));
       process.exit(1);
@@ -80,7 +81,10 @@ async function main() {
 
 // ---- 1. proxy overhead ----------------------------------------------------
 async function evalOverhead(gatewayBase, mockUrl) {
-  const body = JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }] });
+  const body = JSON.stringify({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: 'hi' }],
+  });
   const headers = { 'content-type': 'application/json', authorization: 'Bearer sk-test' };
   const N = 400;
   const WARM = 50;
@@ -150,7 +154,14 @@ function evalCostAccuracy() {
         checks++;
         const ok = Math.abs(got.costUsd - expect) < 1e-12;
         if (!ok) mismatches++;
-        rows.push({ provider, model, tokens: `${mix.inputUncached}in/${mix.output}out`, expect, got: got.costUsd, ok });
+        rows.push({
+          provider,
+          model,
+          tokens: `${mix.inputUncached}in/${mix.output}out`,
+          expect,
+          got: got.costUsd,
+          ok,
+        });
       }
     }
   }
@@ -171,13 +182,59 @@ async function evalParserCoverage(base, gw) {
     });
 
   const shapes = [
-    ['openai chat (non-stream)', () => fetch(`${base}/openai/v1/chat/completions`, post({ model: 'gpt-4o-mini', messages: [] }))],
-    ['openai chat (stream)', () => fetch(`${base}/openai/v1/chat/completions`, post({ model: 'gpt-4o-mini', stream: true, messages: [] }))],
-    ['openai embeddings', () => fetch(`${base}/openai/v1/embeddings`, post({ model: 'text-embedding-3-small', input: 'x' }))],
-    ['anthropic messages (non-stream)', () => fetch(`${base}/anthropic/v1/messages`, post({ model: 'claude-sonnet-4-5', max_tokens: 10, messages: [] }))],
-    ['anthropic messages (stream)', () => fetch(`${base}/anthropic/v1/messages`, post({ model: 'claude-sonnet-4-5', max_tokens: 10, stream: true, messages: [] }))],
-    ['gemini generateContent', () => fetch(`${base}/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=k`, post({ contents: [] }))],
-    ['gemini streamGenerateContent', () => fetch(`${base}/gemini/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=k`, post({ contents: [] }))],
+    [
+      'openai chat (non-stream)',
+      () =>
+        fetch(`${base}/openai/v1/chat/completions`, post({ model: 'gpt-4o-mini', messages: [] })),
+    ],
+    [
+      'openai chat (stream)',
+      () =>
+        fetch(
+          `${base}/openai/v1/chat/completions`,
+          post({ model: 'gpt-4o-mini', stream: true, messages: [] }),
+        ),
+    ],
+    [
+      'openai embeddings',
+      () =>
+        fetch(
+          `${base}/openai/v1/embeddings`,
+          post({ model: 'text-embedding-3-small', input: 'x' }),
+        ),
+    ],
+    [
+      'anthropic messages (non-stream)',
+      () =>
+        fetch(
+          `${base}/anthropic/v1/messages`,
+          post({ model: 'claude-sonnet-4-5', max_tokens: 10, messages: [] }),
+        ),
+    ],
+    [
+      'anthropic messages (stream)',
+      () =>
+        fetch(
+          `${base}/anthropic/v1/messages`,
+          post({ model: 'claude-sonnet-4-5', max_tokens: 10, stream: true, messages: [] }),
+        ),
+    ],
+    [
+      'gemini generateContent',
+      () =>
+        fetch(
+          `${base}/gemini/v1beta/models/gemini-2.5-flash:generateContent?key=k`,
+          post({ contents: [] }),
+        ),
+    ],
+    [
+      'gemini streamGenerateContent',
+      () =>
+        fetch(
+          `${base}/gemini/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=k`,
+          post({ contents: [] }),
+        ),
+    ],
   ];
   const rows = [];
   let covered = 0;

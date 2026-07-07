@@ -32,7 +32,12 @@ test('pricing: longest prefix wins; provider-qualified beats plain; provider def
 test('pricing: overrides merge and can extend', () => {
   const p = new PricingEngine({ 'my-model': { in: 1, out: 2 } });
   assert.equal(p.lookup('anything', 'my-model-v2').in, 1);
-  const { costUsd, priced } = p.cost('x', 'my-model', { inputUncached: 1e6, cacheRead: 0, cacheWrite: 0, output: 5e5 });
+  const { costUsd, priced } = p.cost('x', 'my-model', {
+    inputUncached: 1e6,
+    cacheRead: 0,
+    cacheWrite: 0,
+    output: 5e5,
+  });
   assert.equal(priced, true);
   assert.equal(costUsd, 1 + 1);
 });
@@ -59,7 +64,13 @@ test('openai accumulator: last usage chunk wins, x_groq fallback', () => {
 
 test('openai responses-api accumulator: nested response.usage', () => {
   const acc = makeStreamAccumulator('openai');
-  acc.feed({ type: 'response.completed', response: { model: 'gpt-5.1', usage: { input_tokens: 50, output_tokens: 20, input_tokens_details: { cached_tokens: 30 } } } });
+  acc.feed({
+    type: 'response.completed',
+    response: {
+      model: 'gpt-5.1',
+      usage: { input_tokens: 50, output_tokens: 20, input_tokens_details: { cached_tokens: 30 } },
+    },
+  });
   const { usage, model } = acc.result();
   assert.equal(model, 'gpt-5.1');
   assert.equal(usage.inputUncached, 20);
@@ -117,8 +128,17 @@ test('pricing: ollama:* free default beats cross-provider plain keys', () => {
 });
 
 const rec = (ts, extra = {}) => ({
-  ts, project: 'p', provider: 'openai', model: 'gpt-4o-mini', ok: true,
-  latencyMs: 100, tokensIn: 10, tokensOut: 5, costUsd: 0.001, priced: true, ...extra,
+  ts,
+  project: 'p',
+  provider: 'openai',
+  model: 'gpt-4o-mini',
+  ok: true,
+  latencyMs: 100,
+  tokensIn: 10,
+  tokensOut: 5,
+  costUsd: 0.001,
+  priced: true,
+  ...extra,
 });
 
 test('stats range=all sees unsorted/backfilled records', () => {
@@ -148,14 +168,19 @@ test('demo seeder always includes the Opus cost-spike, any day of week', () => {
     const records = generateDemoRecords(pricing, { days: 14, now });
     const opus = records.filter((r) => r.model === 'claude-opus-4-5');
     assert.ok(opus.length > 0, `no Opus spike when seeding on offset ${offset}`);
-    assert.ok(records.every((r) => r.ts <= now), 'no records in the future');
+    assert.ok(
+      records.every((r) => r.ts <= now),
+      'no records in the future',
+    );
   }
 });
 
 test('provider table: config upstream override + custom provider', () => {
   const table = buildProviderTable({
     upstreams: { openai: 'http://localhost:9999/' },
-    providers: { azure: { upstream: 'https://x.azure.com/', kind: 'openai', authHeader: 'api-key' } },
+    providers: {
+      azure: { upstream: 'https://x.azure.com/', kind: 'openai', authHeader: 'api-key' },
+    },
   });
   assert.equal(table.openai.upstream, 'http://localhost:9999');
   assert.equal(table.azure.authHeader, 'api-key');

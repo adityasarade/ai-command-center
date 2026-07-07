@@ -57,30 +57,62 @@ export function DemoDashboard() {
   const maxSeries = Math.max(...d.series);
 
   return (
-    <div className="demo" aria-label="Sample AI Command Center dashboard - spend, requests, and per-project cost, with currency and range controls">
-      <span className="sr-only" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+    <div
+      className="demo"
+      aria-label="Sample AI Command Center dashboard - spend, requests, and per-project cost, with currency and range controls"
+    >
+      <span
+        className="sr-only"
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          overflow: 'hidden',
+          clip: 'rect(0 0 0 0)',
+        }}
+      >
         Interactive sample dashboard. Toggle display currency and time range below.
       </span>
       <div className="demo-bar">
-        <span className="dots"><i /><i /><i /></span>
+        <span className="dots">
+          <i />
+          <i />
+          <i />
+        </span>
         <span className="title">localhost:4321 - dashboard</span>
         <span className="demo-seg" role="group" aria-label="currency">
           {['INR', 'USD', 'EUR'].map((c) => (
-            <button key={c} className={c === cur ? 'on' : ''} onClick={() => setCur(c)}>{SYM[c]}</button>
+            <button key={c} className={c === cur ? 'on' : ''} onClick={() => setCur(c)}>
+              {SYM[c]}
+            </button>
           ))}
         </span>
         <span className="demo-seg" style={{ marginLeft: 8 }} role="group" aria-label="range">
           {['7D', '30D'].map((r) => (
-            <button key={r} className={r === range ? 'on' : ''} onClick={() => setRange(r)}>{r}</button>
+            <button key={r} className={r === range ? 'on' : ''} onClick={() => setRange(r)}>
+              {r}
+            </button>
           ))}
         </span>
       </div>
       <div className="demo-body">
         <div className="demo-tiles">
-          <div className="demo-tile hero"><div className="l">Total spend</div><div className="v">{money(d.totalUsd)}</div></div>
-          <div className="demo-tile"><div className="l">Requests</div><div className="v">{d.requests.toLocaleString()}</div></div>
-          <div className="demo-tile"><div className="l">Tokens</div><div className="v">{d.tokens}</div></div>
-          <div className="demo-tile"><div className="l">Latency p50</div><div className="v">{d.p50}</div></div>
+          <div className="demo-tile hero">
+            <div className="l">Total spend</div>
+            <div className="v">{money(d.totalUsd)}</div>
+          </div>
+          <div className="demo-tile">
+            <div className="l">Requests</div>
+            <div className="v">{d.requests.toLocaleString()}</div>
+          </div>
+          <div className="demo-tile">
+            <div className="l">Tokens</div>
+            <div className="v">{d.tokens}</div>
+          </div>
+          <div className="demo-tile">
+            <div className="l">Latency p50</div>
+            <div className="v">{d.p50}</div>
+          </div>
         </div>
         <div className="demo-cols">
           <div className="demo-panel">
@@ -88,7 +120,13 @@ export function DemoDashboard() {
             <div className="spark">
               {d.series.map((v, i) => (
                 <div className="col" key={i} title={money(v)}>
-                  <s style={{ height: `${(v / maxSeries) * 108}px`, background: COLORS[0], opacity: 0.85 }} />
+                  <s
+                    style={{
+                      height: `${(v / maxSeries) * 108}px`,
+                      background: COLORS[0],
+                      opacity: 0.85,
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -103,7 +141,14 @@ export function DemoDashboard() {
               {d.projects.map(([name, usd], i) => (
                 <div className="demo-brow" key={name}>
                   <span className="n">{name}</span>
-                  <span className="bar"><i style={{ width: `${Math.max(6, (usd / maxProj) * 100)}%`, background: COLORS[i] }} /></span>
+                  <span className="bar">
+                    <i
+                      style={{
+                        width: `${Math.max(6, (usd / maxProj) * 100)}%`,
+                        background: COLORS[i],
+                      }}
+                    />
+                  </span>
                   <span className="amt">{money(usd)}</span>
                 </div>
               ))}

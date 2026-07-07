@@ -13,7 +13,8 @@ export function Footer() {
             <b style={{ fontFamily: 'var(--font-mono), monospace' }}>ai-command-center</b>
           </div>
           <p className="legal">
-            One gateway, every AI project, one dashboard. Self-hosted, dependency-free, MIT-licensed.
+            One gateway, every AI project, one dashboard. Self-hosted, dependency-free,
+            MIT-licensed.
           </p>
         </div>
         <div>
@@ -32,14 +33,22 @@ export function Footer() {
         </div>
         <div>
           <h4>Project</h4>
-          <a href={REPO} target="_blank" rel="noreferrer">GitHub</a>
-          <a href={`${REPO}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer">Contributing</a>
-          <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">Issues</a>
+          <a href={REPO} target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+          <a href={`${REPO}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer">
+            Contributing
+          </a>
+          <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">
+            Issues
+          </a>
           <a href="/llms.txt">llms.txt</a>
         </div>
       </div>
       <div className="wrap" style={{ marginTop: 24 }}>
-        <span className="legal">© 2026 Aditya Sarade · MIT License · Not affiliated with OpenAI, Anthropic, or Google.</span>
+        <span className="legal">
+          © 2026 Aditya Sarade · MIT License · Not affiliated with OpenAI, Anthropic, or Google.
+        </span>
       </div>
     </footer>
   );

@@ -13,7 +13,7 @@ Three checks:
 
 1. **Proxy overhead** - added latency of routing through the gateway vs. calling
    the same mock directly, as p50/p95/p99 over 400 paired requests. Absolute
-   numbers are machine-dependent; the *delta* is the point (sub-millisecond in
+   numbers are machine-dependent; the _delta_ is the point (sub-millisecond in
    practice, negligible against real 300 ms-30 s LLM calls).
 2. **Cost accuracy** - the gateway's computed USD cost vs. an independent
    recomputation from the published price sheet, across many (provider, model,

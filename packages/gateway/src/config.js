@@ -62,7 +62,10 @@ function readJsonIfExists(file) {
 /** List the built-in preset names (files in presets/). */
 export function listPresets() {
   try {
-    return fs.readdirSync(PRESETS_DIR).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''));
+    return fs
+      .readdirSync(PRESETS_DIR)
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => f.replace(/\.json$/, ''));
   } catch {
     return [];
   }
@@ -145,7 +148,13 @@ function normalizeCurrency(cfg) {
 function merge(base, extra) {
   const out = { ...base };
   for (const [k, v] of Object.entries(extra || {})) {
-    if (v && typeof v === 'object' && !Array.isArray(v) && typeof base[k] === 'object' && !Array.isArray(base[k])) {
+    if (
+      v &&
+      typeof v === 'object' &&
+      !Array.isArray(v) &&
+      typeof base[k] === 'object' &&
+      !Array.isArray(base[k])
+    ) {
       out[k] = { ...base[k], ...v };
     } else if (v !== undefined) {
       out[k] = v;

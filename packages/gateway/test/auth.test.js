@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createGateway } from '../src/server.js';
 import { startMockUpstream } from './mock-upstream.js';
 
-let mock, gw, base, store, auth;
+let mock, gw, base, store;
 
 function waitForRecords(n, timeoutMs = 3000) {
   return new Promise((resolve, reject) => {
@@ -53,7 +53,6 @@ before(async () => {
     keys: {},
   });
   store = gw.store;
-  auth = gw.auth;
   await new Promise((r) => gw.server.listen(0, '127.0.0.1', r));
   base = `http://127.0.0.1:${gw.server.address().port}`;
 });
@@ -77,7 +76,10 @@ test('before setup: open, needsSetup true, proxy works without a key', async () 
 
 test('setup creates admin and locks the gateway; unauthenticated APIs 401', async () => {
   const admin = makeClient();
-  const res = await admin('POST', '/api/auth/setup', { username: 'aditya', password: 'supersecret' });
+  const res = await admin('POST', '/api/auth/setup', {
+    username: 'aditya',
+    password: 'supersecret',
+  });
   assert.equal(res.status, 200);
   const state = await (await admin('GET', '/api/auth/state')).json();
   assert.equal(state.locked, true);
@@ -125,7 +127,13 @@ test('locked /api/track accepts a gateway key without any session', async () => 
   const res = await fetch(`${base}/api/track`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-aicc-key': key },
-    body: JSON.stringify({ project: 'SPOOFED', provider: 'openai', model: 'gpt-4o', tokensIn: 500, tokensOut: 50 }),
+    body: JSON.stringify({
+      project: 'SPOOFED',
+      provider: 'openai',
+      model: 'gpt-4o',
+      tokensIn: 500,
+      tokensOut: 50,
+    }),
   });
   assert.equal(res.status, 200);
   await waitForRecords(n + 1);
@@ -144,7 +152,12 @@ test('member sees only their team’s projects', async () => {
   await admin('POST', '/api/auth/login', { username: 'aditya', password: 'supersecret' });
   const team = await (await admin('POST', '/api/admin/teams', { name: 'payments' })).json();
   await admin('PATCH', '/api/admin/projects/billing-svc', { teamId: team.team.id });
-  await admin('POST', '/api/admin/users', { username: 'rahul', password: 'memberpass1', role: 'member', teamId: team.team.id });
+  await admin('POST', '/api/admin/users', {
+    username: 'rahul',
+    password: 'memberpass1',
+    role: 'member',
+    teamId: team.team.id,
+  });
   // a project on no team (admin-only visibility)
   await admin('POST', '/api/admin/projects', { name: 'secret-proj' });
 
@@ -183,11 +196,16 @@ test('untrusted cross-origin write is blocked; same-origin/no-origin allowed', a
 });
 
 test('login rejects wrong password; last admin cannot be deleted', async () => {
-  assert.equal((await fetch(`${base}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ username: 'aditya', password: 'wrong' }),
-  })).status, 401);
+  assert.equal(
+    (
+      await fetch(`${base}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: 'aditya', password: 'wrong' }),
+      })
+    ).status,
+    401,
+  );
 
   const admin = makeClient();
   await admin('POST', '/api/auth/login', { username: 'aditya', password: 'supersecret' });

@@ -68,12 +68,16 @@ export class AuthService {
   }
 
   async createUser({ username, password, role = 'member', teamId = null }) {
-    username = String(username || '').trim().toLowerCase();
+    username = String(username || '')
+      .trim()
+      .toLowerCase();
     if (!/^[a-z0-9._@-]{2,64}$/.test(username)) {
       throw httpError(400, 'username must be 2-64 chars (letters, digits, . _ @ -)');
     }
-    if (String(password || '').length < 8) throw httpError(400, 'password must be at least 8 characters');
-    if (this.db.users.some((u) => u.username === username)) throw httpError(409, 'username already exists');
+    if (String(password || '').length < 8)
+      throw httpError(400, 'password must be at least 8 characters');
+    if (this.db.users.some((u) => u.username === username))
+      throw httpError(409, 'username already exists');
     if (role !== 'admin' && role !== 'member') throw httpError(400, 'role must be admin or member');
     if (teamId && !this.db.teams.some((t) => t.id === teamId)) throw httpError(400, 'unknown team');
     const salt = crypto.randomBytes(16).toString('hex');
@@ -95,18 +99,21 @@ export class AuthService {
     const user = this.db.users.find((u) => u.id === id);
     if (!user) throw httpError(404, 'no such user');
     if (role) {
-      if (role !== 'admin' && role !== 'member') throw httpError(400, 'role must be admin or member');
+      if (role !== 'admin' && role !== 'member')
+        throw httpError(400, 'role must be admin or member');
       if (user.role === 'admin' && role === 'member' && this.adminCount() === 1) {
         throw httpError(400, 'cannot demote the last admin');
       }
       user.role = role;
     }
     if (teamId !== undefined) {
-      if (teamId && !this.db.teams.some((t) => t.id === teamId)) throw httpError(400, 'unknown team');
+      if (teamId && !this.db.teams.some((t) => t.id === teamId))
+        throw httpError(400, 'unknown team');
       user.teamId = teamId || null;
     }
     if (password) {
-      if (String(password).length < 8) throw httpError(400, 'password must be at least 8 characters');
+      if (String(password).length < 8)
+        throw httpError(400, 'password must be at least 8 characters');
       user.salt = crypto.randomBytes(16).toString('hex');
       user.passwordHash = await AuthService.hashPassword(password, user.salt);
     }
@@ -117,7 +124,8 @@ export class AuthService {
   deleteUser(id) {
     const user = this.db.users.find((u) => u.id === id);
     if (!user) throw httpError(404, 'no such user');
-    if (user.role === 'admin' && this.adminCount() === 1) throw httpError(400, 'cannot delete the last admin');
+    if (user.role === 'admin' && this.adminCount() === 1)
+      throw httpError(400, 'cannot delete the last admin');
     this.db.users = this.db.users.filter((u) => u.id !== id);
     this._persist();
   }
@@ -127,7 +135,13 @@ export class AuthService {
   }
 
   async verifyLogin(username, password) {
-    const user = this.db.users.find((u) => u.username === String(username || '').trim().toLowerCase());
+    const user = this.db.users.find(
+      (u) =>
+        u.username ===
+        String(username || '')
+          .trim()
+          .toLowerCase(),
+    );
     if (!user) return null;
     const hash = await AuthService.hashPassword(password, user.salt);
     const a = Buffer.from(hash, 'hex');
@@ -153,7 +167,10 @@ export class AuthService {
     const payload = b64url(
       JSON.stringify({ uid: user.id, exp: Date.now() + SESSION_DAYS * 24 * 3600e3 }),
     );
-    const sig = crypto.createHmac('sha256', this.db.sessionSecret).update(payload).digest('base64url');
+    const sig = crypto
+      .createHmac('sha256', this.db.sessionSecret)
+      .update(payload)
+      .digest('base64url');
     const maxAge = SESSION_DAYS * 24 * 3600;
     // Secure is added when the request arrived over TLS (e.g. via a reverse proxy),
     // never on plain-HTTP localhost (browsers reject Secure cookies over http).
@@ -174,7 +191,10 @@ export class AuthService {
     if (dot === -1) return null;
     const payload = token.slice(0, dot);
     const sig = token.slice(dot + 1);
-    const expected = crypto.createHmac('sha256', this.db.sessionSecret).update(payload).digest('base64url');
+    const expected = crypto
+      .createHmac('sha256', this.db.sessionSecret)
+      .update(payload)
+      .digest('base64url');
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
@@ -214,7 +234,8 @@ export class AuthService {
     if (!/^[a-zA-Z0-9._ -]{1,64}$/.test(name)) {
       throw httpError(400, 'project name required (letters, digits, . _ - space, max 64)');
     }
-    if (this.db.projects.some((p) => p.name === name)) throw httpError(409, 'project already exists');
+    if (this.db.projects.some((p) => p.name === name))
+      throw httpError(409, 'project already exists');
     if (teamId && !this.db.teams.some((t) => t.id === teamId)) throw httpError(400, 'unknown team');
     const project = {
       name,
@@ -231,7 +252,8 @@ export class AuthService {
     const project = this.db.projects.find((p) => p.name === name);
     if (!project) throw httpError(404, 'no such project');
     if (teamId !== undefined) {
-      if (teamId && !this.db.teams.some((t) => t.id === teamId)) throw httpError(400, 'unknown team');
+      if (teamId && !this.db.teams.some((t) => t.id === teamId))
+        throw httpError(400, 'unknown team');
       project.teamId = teamId || null;
     }
     this._persist();
@@ -273,7 +295,9 @@ export class AuthService {
     if (!this.locked) return null;
     if (!user) return new Set();
     if (user.role === 'admin') return null;
-    return new Set(this.db.projects.filter((p) => p.teamId && p.teamId === user.teamId).map((p) => p.name));
+    return new Set(
+      this.db.projects.filter((p) => p.teamId && p.teamId === user.teamId).map((p) => p.name),
+    );
   }
 }
 
