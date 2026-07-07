@@ -253,6 +253,58 @@ test('project attribution via x-aicc-project header (no path prefix)', async () 
   assert.equal(store.records.at(-1).project, 'header-proj');
 });
 
+test('proxy captures x-aicc-trace/prompt headers and strips them from upstream', async () => {
+  const n = store.records.length;
+  await fetch(`${base}/p/proj-a/openai/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer sk',
+      'x-aicc-trace': 'sess-123',
+      'x-aicc-prompt': 'triage',
+      'x-aicc-prompt-version': 'v5',
+    },
+    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [] }),
+  });
+  await waitForRecords(n + 1);
+  const r = store.records.at(-1);
+  assert.equal(r.trace, 'sess-123');
+  assert.equal(r.prompt, 'triage');
+  assert.equal(r.promptVersion, 'v5');
+  // x-aicc-* headers must not leak upstream
+  assert.equal(mock.state.last.headers['x-aicc-trace'], undefined);
+  assert.equal(mock.state.last.headers['x-aicc-prompt'], undefined);
+});
+
+test('traces / prompts / models / anomalies endpoints', async () => {
+  const traces = await (await fetch(`${base}/api/traces?range=24h`)).json();
+  assert.ok(traces.items.some((t) => t.id === 'sess-123'));
+  const trace = await (await fetch(`${base}/api/trace?id=sess-123`)).json();
+  assert.equal(trace.calls.length >= 1, true);
+  const prompts = await (await fetch(`${base}/api/prompts?range=24h`)).json();
+  assert.ok(prompts.items.some((p) => p.prompt === 'triage' && p.version === 'v5'));
+  const models = await (await fetch(`${base}/api/models?range=24h`)).json();
+  assert.ok(models.items.length >= 1 && 'effectivePerMTok' in models.items[0]);
+  const anom = await (await fetch(`${base}/api/anomalies?range=30d`)).json();
+  assert.ok(Array.isArray(anom.anomalies));
+});
+
+test('budgets: admin set, alert fires, delete', async () => {
+  // set a tiny budget for proj-a (which has spend from earlier tests)
+  const set = await fetch(`${base}/api/admin/budget`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ project: 'proj-a', monthlyUsd: 0.0001, alertAtPct: 50 }),
+  });
+  assert.equal(set.status, 200);
+  const alerts = await (await fetch(`${base}/api/alerts`)).json();
+  assert.ok(alerts.budgets.some((b) => b.project === 'proj-a'));
+  assert.ok(alerts.alerts.some((a) => a.type === 'budget' && a.project === 'proj-a'));
+  // delete it so later assertions are unaffected
+  const del = await fetch(`${base}/api/admin/budget/proj-a`, { method: 'DELETE' });
+  assert.equal(del.status, 200);
+});
+
 test('custom OpenAI-compatible provider from config', async () => {
   const n = store.records.length;
   const res = await fetch(`${base}/p/proj-d/my-compat/v1/chat/completions`, {

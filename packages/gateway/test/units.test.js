@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 import { normalizeModel, PricingEngine } from '../src/pricing.js';
 import { SseParser, makeStreamAccumulator, extractFromJson } from '../src/usage.js';
 import { parseProxyPath, buildProviderTable } from '../src/providers.js';
-import { computeStats } from '../src/stats.js';
+import {
+  computeStats,
+  listTraces,
+  getTrace,
+  listPrompts,
+  modelComparison,
+  monthlySpendByProject,
+} from '../src/stats.js';
+import { detectAnomalies, computeAlerts } from '../src/anomaly.js';
 import { generateDemoRecords } from '../src/demo.js';
 
 test('normalizeModel strips prefixes, dates, and -latest', () => {
@@ -159,6 +167,118 @@ test('daily buckets align to local midnight', () => {
   const bucketDay = new Date(hit.t);
   assert.equal(bucketDay.getHours(), 0);
   assert.equal(bucketDay.getDate(), d.getDate(), 'same local calendar day');
+});
+
+test('traces: grouping, timeline order, and per-trace totals', () => {
+  const now = Date.now();
+  const recs = [
+    rec(now - 5000, {
+      trace: 't1',
+      model: 'gpt-4o',
+      costUsd: 0.01,
+      tokensTotal: 100,
+      latencyMs: 400,
+    }),
+    rec(now - 3000, {
+      trace: 't1',
+      model: 'gpt-4o',
+      costUsd: 0.02,
+      tokensTotal: 200,
+      latencyMs: 600,
+    }),
+    rec(now - 1000, {
+      trace: 't2',
+      model: 'gpt-4o',
+      costUsd: 0.03,
+      tokensTotal: 50,
+      latencyMs: 300,
+    }),
+    rec(now - 2000, {}), // no trace -> excluded from traces
+  ];
+  const { total, items } = listTraces(recs, { range: '24h' });
+  assert.equal(total, 2);
+  const t1 = items.find((t) => t.id === 't1');
+  assert.equal(t1.calls, 2);
+  assert.ok(Math.abs(t1.costUsd - 0.03) < 1e-9);
+  const detail = getTrace(recs, 't1');
+  assert.equal(detail.calls.length, 2);
+  assert.equal(detail.calls[0].offsetMs, 0); // ordered by ts, first is anchor
+  assert.ok(detail.calls[1].offsetMs > 0);
+});
+
+test('prompts: per prompt+version metrics', () => {
+  const now = Date.now();
+  const recs = [
+    rec(now, { prompt: 'p', promptVersion: 'v2', costUsd: 0.01, tokensIn: 10, tokensOut: 5 }),
+    rec(now, { prompt: 'p', promptVersion: 'v2', costUsd: 0.03, tokensIn: 10, tokensOut: 5 }),
+    rec(now, { prompt: 'p', promptVersion: 'v1', costUsd: 0.1, tokensIn: 10, tokensOut: 5 }),
+    rec(now, {}), // no prompt -> excluded
+  ];
+  const { items } = listPrompts(recs, { range: '24h' });
+  assert.equal(items.length, 2);
+  const v2 = items.find((x) => x.version === 'v2');
+  assert.equal(v2.requests, 2);
+  assert.ok(Math.abs(v2.avgCostUsd - 0.02) < 1e-9);
+});
+
+test('model comparison: effective $/1M tokens and error rate', () => {
+  const now = Date.now();
+  const recs = [
+    rec(now, {
+      provider: 'openai',
+      model: 'gpt-4o',
+      costUsd: 1,
+      tokensIn: 500000,
+      tokensOut: 500000,
+    }),
+    rec(now, {
+      provider: 'openai',
+      model: 'gpt-4o',
+      ok: false,
+      costUsd: 0,
+      tokensIn: null,
+      tokensOut: null,
+    }),
+  ];
+  const { items } = modelComparison(recs, { range: '24h' });
+  assert.equal(items.length, 1);
+  assert.ok(Math.abs(items[0].effectivePerMTok - 1) < 1e-6); // $1 / 1e6 tokens * 1e6
+  assert.equal(items[0].errorRate, 0.5);
+});
+
+test('anomaly detection flags a per-project cost spike', () => {
+  const now = Date.now();
+  const day = 24 * 3600e3;
+  const recs = [];
+  // 5 normal days at ~$3, one spike day at ~$9 for project X
+  for (let d = 6; d >= 1; d--) {
+    recs.push(rec(now - d * day, { project: 'x', costUsd: d === 3 ? 9 : 3 }));
+  }
+  const { anomalies } = detectAnomalies(recs, { range: '30d' });
+  assert.ok(anomalies.some((a) => a.type === 'cost_spike' && a.project === 'x'));
+});
+
+test('computeAlerts fires on over-budget project', () => {
+  const now = Date.now();
+  const recs = [rec(now, { project: 'x', costUsd: 120 })];
+  const alerts = computeAlerts(recs, {
+    projects: { x: { monthlyUsd: 100, alertAtPct: 80 } },
+    thresholds: { errorRatePct: 10, p95LatencyMs: 20000 },
+  });
+  assert.ok(
+    alerts.some((a) => a.type === 'budget' && a.severity === 'critical' && a.project === 'x'),
+  );
+});
+
+test('monthlySpendByProject sums the current calendar month', () => {
+  const now = Date.now();
+  const monthStart = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), 1).getTime();
+  const recs = [
+    rec(monthStart + 1000, { project: 'x', costUsd: 5 }),
+    rec(monthStart - 1000, { project: 'x', costUsd: 99 }), // previous month, excluded
+  ];
+  const { byProject } = monthlySpendByProject(recs, now);
+  assert.equal(byProject.x, 5);
 });
 
 test('demo seeder always includes the Opus cost-spike, any day of week', () => {
