@@ -33,6 +33,11 @@ const STRIP_RESPONSE_HEADERS = new Set([
   'transfer-encoding',
   'connection',
   'keep-alive',
+  // Never let an upstream's CORS headers reach the browser — the gateway sets its own.
+  'access-control-allow-origin',
+  'access-control-allow-credentials',
+  'access-control-expose-headers',
+  'vary',
 ]);
 
 export function createProxyHandler({ table, config, pricing, store }) {
@@ -65,6 +70,9 @@ export function createProxyHandler({ table, config, pricing, store }) {
       (provider.kind === 'gemini' && route.rest.includes(':streamGenerateContent'));
 
     // Ensure streaming chat completions report usage in the final chunk.
+    // We inject stream_options ourselves, so we must also strip the resulting
+    // usage-only chunk from what the client sees (it never opted in).
+    let injectedStreamUsage = false;
     if (
       provider.kind === 'openai' &&
       provider.streamUsageInject &&
@@ -74,6 +82,7 @@ export function createProxyHandler({ table, config, pricing, store }) {
     ) {
       requestJson.stream_options = { include_usage: true };
       bodyBuffer = Buffer.from(JSON.stringify(requestJson), 'utf8');
+      injectedStreamUsage = true;
     }
 
     // ---- build upstream request --------------------------------------------
@@ -91,7 +100,10 @@ export function createProxyHandler({ table, config, pricing, store }) {
       headers['x-api-key'] ||
       headers['x-goog-api-key'] ||
       url.searchParams.has('key');
-    if (!hasCallerKey) {
+    // Only inject a central/operator key for trusted callers. Untrusted
+    // cross-origin browser requests are already rejected before reaching here,
+    // so this is defense-in-depth against the confused-deputy attack.
+    if (!hasCallerKey && !route.untrustedOrigin) {
       const key = centralKey(provider, config);
       if (key) headers[provider.authHeader] = (provider.authPrefix || '') + key;
     }
@@ -162,34 +174,61 @@ export function createProxyHandler({ table, config, pricing, store }) {
     for (const [name, value] of upstream.headers.entries()) {
       if (!STRIP_RESPONSE_HEADERS.has(name)) respHeaders[name] = value;
     }
-    respHeaders['access-control-allow-origin'] ??= '*';
+    // CORS was already applied to `res` by the server (per-origin); don't override.
     res.writeHead(upstream.status, respHeaders);
     if (typeof res.flushHeaders === 'function') res.flushHeaders();
 
     const respContentType = upstream.headers.get('content-type') || '';
     const isSse = respContentType.includes('text/event-stream');
     const isJson = respContentType.includes('json');
+    // When WE injected stream_options, filter the usage-only chunk back out so
+    // the proxy stays transparent for clients that never opted in.
+    const filterInjected = injectedStreamUsage && isSse;
 
     const acc = makeStreamAccumulator(provider.kind);
-    const sse = isSse ? new SseParser((obj) => acc.feed(obj)) : null;
+    const sse = isSse && !filterInjected ? new SseParser((obj) => acc.feed(obj)) : null;
+    const relay = filterInjected ? makeInjectedUsageRelay((obj) => acc.feed(obj)) : null;
     const decoder = new TextDecoder('utf8');
     let jsonText = '';
     let parseOverflow = false;
     let ttfbMs = null;
     let aborted = false;
 
+    // Resolves on drain OR client teardown, so a mid-stream abort under
+    // backpressure never hangs the handler forever.
+    const writeChunk = async (data) => {
+      if (data == null || data.length === 0) return true;
+      if (res.destroyed) return false;
+      if (!res.write(data)) {
+        await new Promise((resolve) => {
+          const done = () => {
+            res.off('drain', done);
+            res.off('close', done);
+            resolve();
+          };
+          res.once('drain', done);
+          res.once('close', done);
+        });
+      }
+      return !res.destroyed && !clientClosed;
+    };
+
     try {
       if (upstream.body) {
         for await (const chunk of upstream.body) {
           if (ttfbMs === null) ttfbMs = Math.round(performance.now() - t0);
-          if (!res.write(chunk)) {
-            await new Promise((resolve) => res.once('drain', resolve));
-          }
-          if (sse) {
-            sse.feed(decoder.decode(chunk, { stream: true }));
-          } else if (jsonText.length < MAX_PARSE_BUFFER) {
-            jsonText += decoder.decode(chunk, { stream: true });
-            if (jsonText.length >= MAX_PARSE_BUFFER) parseOverflow = true;
+          timeout.refresh(); // treat the cap as an idle timeout, not total-duration
+          if (relay) {
+            const forward = relay.feed(decoder.decode(chunk, { stream: true }));
+            if (!(await writeChunk(forward))) break;
+          } else {
+            if (!(await writeChunk(chunk))) break;
+            if (sse) {
+              sse.feed(decoder.decode(chunk, { stream: true }));
+            } else if (jsonText.length < MAX_PARSE_BUFFER) {
+              jsonText += decoder.decode(chunk, { stream: true });
+              if (jsonText.length >= MAX_PARSE_BUFFER) parseOverflow = true;
+            }
           }
         }
       }
@@ -201,6 +240,10 @@ export function createProxyHandler({ table, config, pricing, store }) {
     if (sse) {
       sse.feed(decoder.decode());
       sse.flush();
+    }
+    if (relay && !res.destroyed) {
+      const tail = relay.flush();
+      if (tail) res.write(tail);
     }
     res.end();
 
@@ -281,6 +324,55 @@ function finishRecord({ base, status, ok, ttfbMs, latencyMs, usage, respModel, e
   });
 }
 
+/**
+ * SSE relay for the case where the gateway injected stream_options.include_usage:
+ * feed every event's data to the usage accumulator, but forward every event to
+ * the client EXCEPT the final usage-only chunk ({choices: [], usage: {...}}),
+ * which the client never asked for and which crashes naive `choices[0]` readers.
+ * Returns the (string) bytes to forward for each feed().
+ */
+function makeInjectedUsageRelay(onData) {
+  let buf = '';
+  const parseEvent = (event) => {
+    const dataLines = [];
+    for (const line of event.split(/\r?\n/)) {
+      if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
+    }
+    if (!dataLines.length) return undefined;
+    const data = dataLines.join('\n');
+    if (data === '[DONE]') return undefined;
+    try {
+      return JSON.parse(data);
+    } catch {
+      return undefined;
+    }
+  };
+  const isUsageOnly = (obj) =>
+    obj && typeof obj === 'object' && Array.isArray(obj.choices) && obj.choices.length === 0 && obj.usage != null;
+  return {
+    feed(text) {
+      buf += text;
+      let out = '';
+      for (;;) {
+        const m = /\r?\n\r?\n/.exec(buf);
+        if (!m) break;
+        const event = buf.slice(0, m.index);
+        const delim = m[0];
+        buf = buf.slice(m.index + delim.length);
+        const obj = parseEvent(event);
+        if (obj !== undefined) onData(obj);
+        if (!isUsageOnly(obj)) out += event + delim; // forward all but the usage-only chunk
+      }
+      return out;
+    },
+    flush() {
+      const rest = buf;
+      buf = '';
+      return rest;
+    },
+  };
+}
+
 function extractErrorMessage(text) {
   if (!text) return null;
   try {
@@ -323,9 +415,7 @@ export function readBody(req, limit) {
 
 export function respondJson(res, status, obj) {
   const body = JSON.stringify(obj, null, 2);
-  res.writeHead(status, {
-    'content-type': 'application/json',
-    'access-control-allow-origin': '*',
-  });
+  // CORS (if any) is set per-origin on `res` by the server before this runs.
+  res.writeHead(status, { 'content-type': 'application/json' });
   res.end(body);
 }

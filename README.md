@@ -96,6 +96,42 @@ import aicc; aicc.init(project="invoice-bot")        # packages/sdk-python
 import { init } from "@ai-command-center/sdk"; init({ project: "support-bot" });
 ```
 
+> **With login enabled** (see Access control below), the path prefix becomes the
+> project's **gateway key** instead of its name: `.../k/<gateway-key>/openai/v1`.
+> `npx ai-command-center snippets --project <name>` prints the exact URLs with the
+> key filled in.
+
+## Access control (admin, teams, per-project keys)
+
+By default the gateway is **open until you create the first admin account** —
+zero friction to get started. Open the dashboard and it prompts you to create
+the admin; from that point:
+
+- **Login is required** for the dashboard and all data APIs (secure `HttpOnly`
+  session cookie; passwords hashed with scrypt — all zero-dependency).
+- **Admins** see every project and manage users, teams, and project keys under
+  **Settings**. **Members** see only the projects assigned to **their team**.
+- **The proxy requires a per-project gateway key** (`/k/<key>/…` or an
+  `x-aicc-key` header). Each project gets its own key; rotate or revoke anytime.
+
+Manage everything in the dashboard's Settings panel, or from the CLI:
+```bash
+npx ai-command-center user add --username aditya --password '…'   # first = admin
+npx ai-command-center user list
+```
+Prefer no auth (single-user localhost)? Start with `--no-auth`.
+
+## Currency
+
+Costs are stored in USD and shown in your currency of choice — **INR by
+default**, with a ₹/$/€ toggle in the top bar (your pick is remembered).
+Live exchange rates are fetched daily (frankfurter.app → open.er-api.com,
+cached locally, with a built-in fallback if offline). Pin manual rates or
+change the default/options via config:
+```jsonc
+"currency": { "default": "INR", "options": ["INR", "USD", "EUR"], "rates": null }
+```
+
 **Escape hatch** — for batch jobs or providers the proxy doesn't cover, report
 usage directly and it's priced + dashboarded the same way:
 ```bash
@@ -141,8 +177,14 @@ Options: `--port` (default 4321) · `--host` (0.0.0.0 to share on LAN) ·
 {
   "port": 4321,
   "host": "127.0.0.1",              // 0.0.0.0 → team-shared gateway on LAN/server
+  "auth": true,                     // false = no login / no gateway keys (like --no-auth)
 
-  // OPTIONAL central keys — injected only when the caller sends none.
+  // Browser origins allowed to call the gateway cross-origin (web apps calling
+  // the proxy from the browser). Same-origin + server-side apps never need this.
+  "allowedOrigins": [],
+
+  // OPTIONAL central keys — injected only when the caller sends none
+  // (and never for untrusted cross-origin browser requests).
   "keys": { "openai": "sk-…", "anthropic": "sk-ant-…" },
 
   // Custom OpenAI-compatible providers (Azure OpenAI, vLLM, internal…)
@@ -208,12 +250,23 @@ npm start         # run the gateway from source
 
 Zero runtime dependencies (Chart.js is vendored for the dashboard). Node ≥ 18.17.
 
+## Security posture
+
+- **Cross-origin protection**: the gateway only accepts browser requests from
+  its own origin (or origins you list in `allowedOrigins`). A random web page you
+  visit cannot spend your API keys through the proxy or wipe your telemetry.
+  Server-side apps (which send no `Origin` header) are unaffected.
+- **Central keys are never handed to untrusted cross-origin callers.**
+- **No prompt/response bodies are stored** — only metadata (tokens, cost, latency).
+- For anything beyond localhost, enable auth (default) and, ideally, also put it
+  behind your VPN or a TLS-terminating reverse proxy.
+
 ## Current limitations (MVP)
 
 - Pricing table ships with sane defaults but **will drift** — verify against
   provider price pages and override via config (unpriced models are flagged, never guessed).
-- No auth on the dashboard/API — bind to localhost (default) or put it behind
-  your VPN/reverse proxy when sharing.
 - JSONL + in-memory aggregation is comfortable into the hundreds of thousands
   of records; beyond that, the storage layer is designed to be swapped (SQLite/Postgres).
+- Auth is username/password + session cookies (no SSO/OAuth yet) and metadata is
+  not encrypted at rest — fine for an internal tool, plan hardening before external multi-tenant use.
 - OpenAI Realtime/WebSocket APIs aren't proxied (HTTP only).

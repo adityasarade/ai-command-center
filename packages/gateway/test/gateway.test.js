@@ -105,6 +105,24 @@ test('openai stream: stream_options injected, SSE relayed intact, usage from fin
   assert.equal(r.priced, true);
 });
 
+test('injected stream_options usage chunk is filtered from a client that did not opt in', async () => {
+  const n = store.records.length;
+  const res = await fetch(`${base}/p/proj-a/openai/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ model: 'gpt-4o-mini', stream: true, messages: [] }),
+  });
+  const text = await res.text();
+  assert.ok(text.includes('"Hel"') && text.includes('"lo"'), 'content chunks still relayed');
+  assert.ok(text.includes('[DONE]'), 'DONE still relayed');
+  assert.ok(!/"choices"\s*:\s*\[\s*\]/.test(text), 'usage-only choices:[] chunk withheld from client');
+  assert.ok(!text.includes('"completion_tokens"'), 'usage object not leaked to client');
+  await waitForRecords(n + 1);
+  const r = store.records.at(-1);
+  assert.equal(r.tokensIn, 120); // usage still captured for billing
+  assert.equal(r.tokensOut, 30);
+});
+
 test('openai stream with caller-set stream_options is left untouched', async () => {
   const n = store.records.length;
   await fetch(`${base}/openai/v1/chat/completions`, {
@@ -279,6 +297,34 @@ test('/api/track ingests external usage and prices it', async () => {
   const r = store.records.at(-1);
   assert.equal(r.project, 'batch-job');
   approx(r.costUsd, (1000 * 2.5 + 100 * 10) / 1e6);
+});
+
+test('/api/track with explicit null costUsd/latency is priced, not zeroed', async () => {
+  const n = store.records.length;
+  // exactly what the Python SDK used to send (null, not omitted)
+  await fetch(`${base}/api/track`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ project: 'sdk', provider: 'openai', model: 'gpt-4o-mini', tokensIn: 1200, tokensOut: 300, costUsd: null, latencyMs: null }),
+  });
+  await waitForRecords(n + 1);
+  const r = store.records.at(-1);
+  assert.equal(r.priced, true);
+  approx(r.costUsd, (1200 * 0.15 + 300 * 0.6) / 1e6);
+  assert.equal(r.latencyMs, null); // stored as absent, not 0 (would skew percentiles)
+});
+
+test('demo days are clamped to a sane maximum', async () => {
+  const res = await fetch(`${base}/api/demo`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ days: 500000, clear: true }),
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.seeded < 400000, `clamped seeding, got ${body.seeded}`);
+  // clean the demo rows back out so later assertions are unaffected
+  await fetch(`${base}/api/records?simulated=1`, { method: 'DELETE' });
 });
 
 test('/api/stats aggregates and buckets', async () => {

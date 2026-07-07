@@ -124,13 +124,21 @@ export function centralKey(provider, config) {
 
 /**
  * Parse an incoming proxy path.
- *   /p/<project>/<provider>/<rest...>   or   /<provider>/<rest...>
- * Returns { project, providerId, rest } or null when the first segment
- * matches no known provider (caller then 404s with help).
+ *   /k/<gateway-key>/<provider>/<rest...>   (auth enabled)
+ *   /p/<project>/<provider>/<rest...>       (project attribution)
+ *   /<provider>/<rest...>
+ * Prefixes may combine as /k/<key>/p/<project>/... (the key still decides
+ * attribution once auth is locked). Returns { key, project, providerId, rest }
+ * or null when the provider segment matches nothing (caller 404s with help).
  */
 export function parseProxyPath(pathname, table) {
   let project = null;
+  let key = null;
   let segments = pathname.replace(/^\/+/, '').split('/');
+  if (segments[0] === 'k' && segments.length >= 3) {
+    key = decodeURIComponent(segments[1]);
+    segments = segments.slice(2);
+  }
   if (segments[0] === 'p' && segments.length >= 3) {
     project = decodeURIComponent(segments[1]);
     segments = segments.slice(2);
@@ -138,5 +146,5 @@ export function parseProxyPath(pathname, table) {
   const providerId = segments[0];
   if (!providerId || !table[providerId]) return null;
   const rest = '/' + segments.slice(1).join('/');
-  return { project, providerId, rest };
+  return { key, project, providerId, rest };
 }

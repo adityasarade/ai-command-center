@@ -34,24 +34,43 @@ export class PricingEngine {
       if (price == null) continue;
       this.table[key.toLowerCase()] = price;
     }
-    // Longest keys first so the first prefix hit is the most specific one.
-    this.keys = Object.keys(this.table).sort((a, b) => b.length - a.length);
+    // Parse keys into {provider, modelPrefix}. Sort by modelPrefix length so the
+    // most specific model match wins — and crucially compare the MODEL part only,
+    // not including any "provider:" qualifier (else "openai:gpt-4o" would out-rank
+    // and wrongly capture "gpt-4o-mini"). Qualified keys win length ties.
+    this.entries = Object.keys(this.table)
+      .map((key) => {
+        const idx = key.indexOf(':');
+        return idx === -1
+          ? { key, provider: null, modelPrefix: key }
+          : { key, provider: key.slice(0, idx), modelPrefix: key.slice(idx + 1) };
+      })
+      .filter((e) => e.modelPrefix !== '*') // provider-wide defaults handled separately
+      .sort((a, b) => b.modelPrefix.length - a.modelPrefix.length || (a.provider ? -1 : 1));
   }
 
   /** Find the price entry for a provider+model, or null. */
   lookup(providerId, model) {
     const norm = normalizeModel(model);
     if (!norm) return null;
-    const qualified = `${providerId}:${norm}`;
-    for (const key of this.keys) {
-      if (key.includes(':')) {
-        if (qualified.startsWith(key)) return this.table[key];
-      } else if (norm.startsWith(key)) {
-        return this.table[key];
+    const wildcard = this.table[`${providerId}:*`];
+    if (wildcard != null) {
+      // A provider-wide default (e.g. "ollama:*") is a deliberate policy: only a
+      // provider-qualified entry for this provider may override it; generic
+      // cross-provider plain keys (a colliding cloud model name) are ignored.
+      for (const e of this.entries) {
+        if (e.provider === providerId && norm.startsWith(e.modelPrefix)) return this.table[e.key];
       }
+      return wildcard;
     }
-    const providerDefault = this.table[`${providerId}:*`];
-    return providerDefault || null;
+    // Otherwise: most-specific model prefix wins across qualified + plain keys
+    // (entries are pre-sorted by model-part length, qualified beating plain on ties),
+    // so "openai:gpt-4o" can't capture the longer, more specific "gpt-4o-mini".
+    for (const e of this.entries) {
+      if (e.provider && e.provider !== providerId) continue;
+      if (norm.startsWith(e.modelPrefix)) return this.table[e.key];
+    }
+    return null;
   }
 
   /**

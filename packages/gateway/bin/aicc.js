@@ -8,6 +8,7 @@ import { startGateway } from '../src/server.js';
 import { Store } from '../src/store.js';
 import { PricingEngine } from '../src/pricing.js';
 import { FxService } from '../src/fx.js';
+import { AuthService } from '../src/auth.js';
 import { seedDemo } from '../src/demo.js';
 import { computeStats } from '../src/stats.js';
 
@@ -32,6 +33,7 @@ for (let i = 0; i < argv.length; i++) {
   if (a === '--help' || a === '-h') flags.help = true;
   else if (a === '--version' || a === '-v') flags.version = true;
   else if (a === '--no-open') flags.noOpen = true;
+  else if (a === '--no-auth') flags.noAuth = true;
   else if (a === '--clear') flags.clear = true;
   else if (a === '--all') flags.all = true;
   else if (a === '--json') flags.json = true;
@@ -61,6 +63,7 @@ try {
   else if (command === 'clear') await cmdClear();
   else if (command === 'stats') await cmdStats();
   else if (command === 'snippets') cmdSnippets();
+  else if (command === 'user') await cmdUser();
   else {
     console.error(red(`Unknown command: ${command}\n`));
     printHelp();
@@ -81,14 +84,29 @@ async function cmdStart() {
   console.log(`  ${bold(cyan('◆ AI Command Center'))} ${dim('v' + PKG.version)}`);
   console.log(`  ${dim('One gateway, every AI project, one dashboard.')}`);
   console.log('');
+  const auth = gateway.auth;
+  const authLine = auth.disabled
+    ? yellow('disabled (--no-auth)')
+    : auth.locked
+      ? green(`on — ${auth.db.users.length} user(s), ${auth.db.projects.length} project key(s)`)
+      : yellow('setup pending — open the dashboard to create the admin account');
   console.log(`  ${bold('Dashboard')}   ${green(url)}`);
+  console.log(`  ${bold('Auth')}        ${authLine}`);
   console.log(`  ${bold('Data')}        ${dim(config.dataDir)}`);
   console.log(`  ${bold('Records')}     ${dim(String(gateway.store.records.length))}`);
   console.log('');
-  console.log(`  ${bold('Point your app at the gateway')} ${dim('(pick your provider)')}`);
-  console.log(`    OpenAI      ${cyan(`${url}/p/<project>/openai/v1`)}`);
-  console.log(`    Anthropic   ${cyan(`${url}/p/<project>/anthropic`)}`);
-  console.log(`    Gemini      ${cyan(`${url}/p/<project>/gemini`)}`);
+  if (auth.locked) {
+    console.log(`  ${bold('Point your app at the gateway')} ${dim('(auth is on: URLs carry your project key)')}`);
+    console.log(`    OpenAI      ${cyan(`${url}/k/<gateway-key>/openai/v1`)}`);
+    console.log(`    Anthropic   ${cyan(`${url}/k/<gateway-key>/anthropic`)}`);
+    console.log(`    Gemini      ${cyan(`${url}/k/<gateway-key>/gemini`)}`);
+    console.log(`    ${dim('keys live in dashboard → settings → projects, or:')} ${bold('npx ai-command-center snippets --project <name>')}`);
+  } else {
+    console.log(`  ${bold('Point your app at the gateway')} ${dim('(pick your provider)')}`);
+    console.log(`    OpenAI      ${cyan(`${url}/p/<project>/openai/v1`)}`);
+    console.log(`    Anthropic   ${cyan(`${url}/p/<project>/anthropic`)}`);
+    console.log(`    Gemini      ${cyan(`${url}/p/<project>/gemini`)}`);
+  }
   console.log(`    ${dim('also: openrouter, mistral, deepseek, xai, groq, together, ollama')}`);
   console.log('');
   console.log(`  ${dim('Copy-paste integration code:')} ${bold('npx ai-command-center snippets')}`);
@@ -209,32 +227,100 @@ function cmdSnippets() {
   const config = loadConfig(flags);
   const project = flags.project || 'my-app';
   const url = `http://${displayHost(config.host)}:${config.port}`;
-  console.log(snippetsText(url, project, { bold, cyan, dim }));
+  const auth = new AuthService(config.dataDir, { disabled: config.auth === false });
+  let seg = `p/${encodeURIComponent(project)}`;
+  let keyHeader = null;
+  if (auth.locked) {
+    const entry = auth.db.projects.find((p) => p.name === project);
+    if (entry) {
+      seg = `k/${entry.key}`;
+      keyHeader = entry.key;
+    } else {
+      seg = 'k/<gateway-key>';
+      console.log(
+        yellow(`\n  ⚠ auth is enabled but no project named "${project}" exists yet.`) +
+          dim('\n    Create it in the dashboard (settings → projects) to get its gateway key,\n') +
+          dim(`    then re-run: npx ai-command-center snippets --project ${project}\n`),
+      );
+    }
+  }
+  console.log(snippetsText(url, project, { bold, cyan, dim, seg, keyHeader }));
+}
+
+async function cmdUser() {
+  const config = loadConfig(flags);
+  const auth = new AuthService(config.dataDir, { disabled: config.auth === false });
+  const action = positional[1];
+  if (action === 'add') {
+    if (!flags.username || !flags.password) {
+      throw new Error('usage: aicc user add --username <name> --password <pass> [--role admin|member]');
+    }
+    const user = auth.createUser({
+      username: flags.username,
+      password: flags.password,
+      role: flags.role || (auth.db.users.length === 0 ? 'admin' : 'member'),
+    });
+    console.log(green(`✔ created ${user.role} "${user.username}"`));
+    if (await liveGateway(config)) {
+      console.log(yellow('  a gateway is currently running — restart it to pick up auth changes'));
+    }
+  } else if (action === 'list') {
+    if (!auth.db.users.length) {
+      console.log(dim('no users yet — auth activates once the first admin is created'));
+      return;
+    }
+    for (const u of auth.db.users) {
+      const pu = auth.publicUser(u);
+      console.log(`  ${pu.username.padEnd(24)} ${pu.role.padEnd(8)} ${dim(pu.teamName || '(no team)')}`);
+    }
+  } else {
+    throw new Error('usage: aicc user <add|list> — user management lives in the dashboard (settings)');
+  }
 }
 
 // -------------------------------------------------------------------- helpers
 async function liveGateway(config) {
-  // A running gateway may be on a different port than this invocation's config —
-  // it leaves a discovery file in the (shared) data dir. Check that first.
-  const candidates = [];
-  try {
-    const disc = JSON.parse(fs.readFileSync(path.join(config.dataDir, 'gateway.json'), 'utf8'));
-    if (disc?.port) candidates.push(`http://${displayHost(disc.host)}:${disc.port}`);
-  } catch {
-    /* no discovery file */
-  }
-  candidates.push(`http://${displayHost(config.host)}:${config.port}`);
-  for (const url of [...new Set(candidates)]) {
+  const explicitAddr = flags.port != null || flags.host != null;
+  // The discovery file lives inside the data dir a gateway actually serves, so a
+  // hit there is guaranteed to be the gateway for THIS data dir.
+  if (!explicitAddr) {
     try {
-      const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(700) });
-      const body = await res.json().catch(() => null);
-      // require the product marker — a foreign service answering 200 on /health is not us
-      if (res.ok && body?.name === 'ai-command-center') return url;
+      const disc = JSON.parse(fs.readFileSync(path.join(config.dataDir, 'gateway.json'), 'utf8'));
+      if (disc?.port) {
+        const url = `http://${displayHost(disc.host)}:${disc.port}`;
+        if (await isOurGateway(url, config, true)) return url;
+      }
     } catch {
-      /* not running here */
+      /* no discovery file */
     }
   }
+  // Otherwise probe the configured address, but only trust it if it serves our
+  // data dir — never operate on a gateway backing a different store.
+  const url = `http://${displayHost(config.host)}:${config.port}`;
+  if (await isOurGateway(url, config, false)) return url;
   return null;
+}
+
+async function isOurGateway(url, config, viaDiscovery) {
+  try {
+    const health = await fetch(`${url}/health`, { signal: AbortSignal.timeout(700) })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (health?.name !== 'ai-command-center') return false;
+    // A discovery-file hit already proves the data dir matches.
+    if (viaDiscovery) return true;
+    // Otherwise confirm via /api/meta. dataDir is only exposed to admins /
+    // when auth is unlocked; if we can't read it, don't risk the wrong store.
+    const meta = await fetch(`${url}/api/meta`, { signal: AbortSignal.timeout(700) })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (meta && meta.dataDir) {
+      return path.resolve(meta.dataDir) === path.resolve(config.dataDir);
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 function displayHost(host) {
@@ -276,49 +362,66 @@ function fmtNum(v) {
   return String(v);
 }
 
-export function snippetsText(url, project, { bold: b = (s) => s, cyan: cy = (s) => s, dim: d = (s) => s } = {}) {
+export function snippetsText(
+  url,
+  project,
+  { bold: b = (s) => s, cyan: cy = (s) => s, dim: d = (s) => s, seg, keyHeader = null } = {},
+) {
+  seg ||= `p/${encodeURIComponent(project)}`;
+  const base = `${url}/${seg}`;
+  const keyed = seg.startsWith('k/');
+  const trackAuth = keyHeader
+    ? ` \\\n    -H "x-aicc-key: ${keyHeader}"`
+    : keyed
+      ? ' \\\n    -H "x-aicc-key: <gateway-key>"'
+      : '';
   return `
 ${b('── Plug any project into AI Command Center ──────────────────────────')}
 
 ${b('Zero-code (any language)')} ${d('— just point the SDK at the gateway via env vars:')}
-  ${cy(`export OPENAI_BASE_URL="${url}/p/${project}/openai/v1"`)}
-  ${cy(`export ANTHROPIC_BASE_URL="${url}/p/${project}/anthropic"`)}
-  ${d('Your API keys stay exactly where they are — the gateway passes them through.')}
+  ${cy(`export OPENAI_BASE_URL="${base}/openai/v1"`)}
+  ${cy(`export ANTHROPIC_BASE_URL="${base}/anthropic"`)}
+  ${d('Your provider API keys stay exactly where they are — the gateway passes them through.')}
 
 ${b('Python (OpenAI SDK)')}
   from openai import OpenAI
-  client = OpenAI(base_url="${url}/p/${project}/openai/v1")
+  client = OpenAI(base_url="${base}/openai/v1")
 
 ${b('Python (Anthropic SDK)')}
   from anthropic import Anthropic
-  client = Anthropic(base_url="${url}/p/${project}/anthropic")
+  client = Anthropic(base_url="${base}/anthropic")
 
 ${b('Python (google-genai)')}
   from google import genai
-  client = genai.Client(http_options={"base_url": "${url}/p/${project}/gemini"})
+  client = genai.Client(http_options={"base_url": "${base}/gemini"})
 
 ${b('JavaScript / TypeScript')}
   import OpenAI from "openai";
-  const client = new OpenAI({ baseURL: "${url}/p/${project}/openai/v1" });
+  const client = new OpenAI({ baseURL: "${base}/openai/v1" });
 
 ${b('Java (openai-java)')}
   OpenAIClient client = OpenAIOkHttpClient.builder()
-      .fromEnv().baseUrl("${url}/p/${project}/openai/v1").build();
+      .fromEnv().baseUrl("${base}/openai/v1").build();
 
 ${b('LangChain (Python)')}
-  llm = ChatOpenAI(base_url="${url}/p/${project}/openai/v1")
+  llm = ChatOpenAI(base_url="${base}/openai/v1")
 
 ${b('curl')}
-  curl ${url}/p/${project}/openai/v1/chat/completions \\
+  curl ${base}/openai/v1/chat/completions \\
     -H "Authorization: Bearer $OPENAI_API_KEY" -H "Content-Type: application/json" \\
     -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hi"}]}'
 
 ${b('Anything else (batch jobs, unsupported providers)')} ${d('— report usage directly:')}
-  curl -X POST ${url}/api/track -H "Content-Type: application/json" \\
+  curl -X POST ${url}/api/track -H "Content-Type: application/json"${trackAuth} \\
     -d '{"project":"${project}","provider":"openai","model":"gpt-4o-mini","tokensIn":1200,"tokensOut":300}'
 
-${d(`Replace "${project}" with your project name — that's how calls are grouped on the dashboard.`)}
-${d('Alternative to path prefix: send header  x-aicc-project: ' + project)}
+${
+  keyed
+    ? d('The gateway key in the URL both authenticates the call and assigns it to your project.')
+    : d(`Replace "${project}" with your project name — that's how calls are grouped on the dashboard.`) +
+      '\n' +
+      d('Alternative to path prefix: send header  x-aicc-project: ' + project)
+}
 `;
 }
 
@@ -335,6 +438,7 @@ ${bold('Commands')}
   clear      Remove demo data (--all wipes everything)
   stats      Print a usage/cost summary in the terminal
   snippets   Copy-paste integration code for every language
+  user       add|list — CLI escape hatch (user management lives in the dashboard)
   help       Show this help
 
 ${bold('Options')}
@@ -347,6 +451,7 @@ ${bold('Options')}
   --days <n>        demo: days of history to generate (default 14)
   --json            stats: raw JSON output
   --no-open         start: don't open the browser
+  --no-auth         start: disable login + gateway keys entirely
   --version         Print version
 
 ${bold('Examples')}

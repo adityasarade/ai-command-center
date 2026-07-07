@@ -118,8 +118,21 @@
   };
   const charts = {};
   let meta = null;
+  let auth = null;
   let colorMap = new Map();
   let refreshTimer = null;
+  let loadSeq = 0;
+
+  async function apiSend(method, path, body) {
+    const res = await fetch(path, {
+      method,
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    return data;
+  }
 
   function projectColor(name) {
     return colorMap.get(name) || OTHER_COLOR;
@@ -421,8 +434,9 @@
         : '';
       fxInfo = ` · fx: ${state.fx.source}${age}${state.fx.stale ? ' (stale)' : ''}`;
     }
+    const dataInfo = meta?.dataDir ? ` · data: ${meta.dataDir}` : '';
     $('footMeta').textContent = meta
-      ? `v${meta.version} · data: ${meta.dataDir} · gateway http://localhost:${meta.port}${fxInfo}`
+      ? `v${meta.version}${dataInfo} · gateway http://localhost:${meta.port}${fxInfo}`
       : '';
     const unpriced = stats.totals.unpriced;
     const chipU = $('unpricedChip');
@@ -439,9 +453,62 @@
     }
   }
 
+  // ------------------------------------------------------------ auth flow
+  async function refreshAuth() {
+    try {
+      auth = await api('/api/auth/state');
+    } catch {
+      auth = { enabled: false, locked: false, needsSetup: false, user: null };
+    }
+    const box = $('userBox');
+    if (auth.user) {
+      box.hidden = false;
+      $('userName').innerHTML = `${esc(auth.user.username)}<span class="role">${esc(auth.user.role)}</span>`;
+      $('settingsBtn').hidden = auth.user.role !== 'admin';
+    } else {
+      box.hidden = true;
+    }
+    // Setup callout only when auth is enabled but no admin exists yet.
+    $('setupCallout').hidden = !(auth.enabled && auth.needsSetup);
+    return auth;
+  }
+
+  function showGate(mode) {
+    // mode: 'login' | 'setup'
+    $('authGate').hidden = false;
+    $('main').hidden = true;
+    $('emptyState').hidden = true;
+    const setup = mode === 'setup';
+    $('gateTitle').textContent = setup ? 'Create admin account' : 'Sign in';
+    $('gateDesc').textContent = setup
+      ? 'This first account is the administrator — it manages users, teams, and project keys.'
+      : 'AI Command Center is protected. Sign in to continue.';
+    $('gateSubmit').textContent = setup ? 'Create admin & sign in' : 'Sign in';
+    $('gateForm').dataset.mode = mode;
+    $('gatePass').autocomplete = setup ? 'new-password' : 'current-password';
+    $('gateError').hidden = true;
+    $('gateCancelWrap').hidden = !(setup && !auth.needsSetup ? false : setup && auth.needsSetup ? true : false);
+    // Show cancel only for a setup opened voluntarily (admin already exists is impossible here); keep simple:
+    $('gateCancelWrap').hidden = true;
+    $('gateUser').focus();
+  }
+
+  function hideGate() {
+    $('authGate').hidden = true;
+  }
+
   // ------------------------------------------------------------ data flow
   async function loadAll(full) {
+    const seq = ++loadSeq;
     try {
+      await refreshAuth();
+      // Gate the whole dashboard when auth is locked and we're not signed in.
+      if (auth.locked && !auth.user) {
+        showGate('login');
+        return;
+      }
+      hideGate();
+
       const statsQ = new URLSearchParams({ range: state.range });
       if (state.project) statsQ.set('project', state.project);
       const reqQ = new URLSearchParams({ limit: '100' });
@@ -456,6 +523,8 @@
         api('/api/requests?' + reqQ),
         api('/api/projects'),
       ]);
+      if (seq !== loadSeq) return; // a newer load superseded this one
+
       meta = m;
       state.fx = fx;
       if (!state.cur || !fx.options.includes(state.cur)) state.cur = fx.default;
@@ -464,12 +533,17 @@
 
       const empty = m.records === 0;
       $('emptyState').hidden = !empty;
-      $('main').hidden = empty;
+      $('main').hidden = empty && $('adminPanel').hidden;
       if (empty) {
+        const base = auth.locked
+          ? `${location.origin}/k/<your-project-key>`
+          : `${location.origin}/p/my-app`;
         $('emptySnippet').textContent =
-          `export OPENAI_BASE_URL="${location.origin}/p/my-app/openai/v1"\n` +
-          `export ANTHROPIC_BASE_URL="${location.origin}/p/my-app/anthropic"\n` +
+          `export OPENAI_BASE_URL="${base}/openai/v1"\n` +
+          `export ANTHROPIC_BASE_URL="${base}/anthropic"\n` +
           `# then run your app exactly as before — that's the whole integration`;
+        $('seedBtn').style.display = auth.locked && auth.user?.role !== 'admin' ? 'none' : '';
+        if (full) populateProjects(projects);
         return;
       }
 
@@ -478,6 +552,7 @@
       const prevQ = new URLSearchParams({ from: String(stats.from - span), to: String(stats.from) });
       if (state.project) prevQ.set('project', state.project);
       const prev = state.range === 'all' ? null : await api('/api/stats?' + prevQ);
+      if (seq !== loadSeq) return;
 
       assignColors(projects);
       renderTiles(stats, prev);
@@ -491,11 +566,20 @@
 
       if (full) populateProjects(projects);
     } catch (err) {
+      if (String(err).includes('HTTP 401')) {
+        await refreshAuth();
+        showGate(auth.needsSetup ? 'setup' : 'login');
+        return;
+      }
       console.error('[aicc] dashboard load failed:', err);
     }
   }
 
   function populateProjects(projects) {
+    // Drop a stale filter if its project no longer has any visible records.
+    if (state.project && !projects.some((p) => p.project === state.project)) {
+      state.project = '';
+    }
     const sel = $('projectSel');
     const current = state.project;
     sel.innerHTML =
@@ -567,15 +651,219 @@
     btn.disabled = true;
     btn.textContent = 'Seeding…';
     try {
-      await fetch('/api/demo', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ days: 14 }),
-      });
+      await apiSend('POST', '/api/demo', { days: 14 });
       await loadAll(true);
+    } catch (err) {
+      alert('Could not seed demo data: ' + err.message);
     } finally {
       btn.disabled = false;
       btn.textContent = 'Seed 14 days of demo data';
+    }
+  });
+
+  // ---- auth gate form (login / first-run admin setup) ----
+  $('gateForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const mode = ev.currentTarget.dataset.mode;
+    const username = $('gateUser').value.trim();
+    const password = $('gatePass').value;
+    const errEl = $('gateError');
+    errEl.hidden = true;
+    try {
+      await apiSend('POST', mode === 'setup' ? '/api/auth/setup' : '/api/auth/login', { username, password });
+      $('gatePass').value = '';
+      await loadAll(true);
+      connectSse();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.hidden = false;
+    }
+  });
+
+  $('calloutSetupBtn').addEventListener('click', () => showGate('setup'));
+
+  $('logoutBtn').addEventListener('click', async () => {
+    await apiSend('POST', '/api/auth/logout').catch(() => {});
+    hideAdmin();
+    await loadAll(true);
+  });
+
+  // ---- settings / admin panel ----
+  function hideAdmin() {
+    $('adminPanel').hidden = true;
+  }
+  $('adminClose').addEventListener('click', () => {
+    hideAdmin();
+    loadAll(false);
+  });
+  $('settingsBtn').addEventListener('click', async () => {
+    $('adminPanel').hidden = false;
+    $('main').hidden = false;
+    $('emptyState').hidden = true;
+    await renderAdmin();
+    $('adminPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  async function renderAdmin() {
+    let data;
+    try {
+      data = await api('/api/admin/overview');
+    } catch (err) {
+      $('adminProjects').innerHTML = `<div class="admin-err">${esc(err.message)}</div>`;
+      return;
+    }
+    const teamOpts = (sel) =>
+      '<option value="">— no team —</option>' +
+      data.teams.map((t) => `<option value="${t.id}"${t.id === sel ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
+
+    // Projects + gateway keys
+    $('adminProjects').innerHTML = `
+      <h3>Projects &amp; gateway keys</h3>
+      <div class="admin-list">
+        ${
+          data.projects.length
+            ? data.projects
+                .map(
+                  (p) => `
+          <div class="admin-item">
+            <div class="row1"><strong>${esc(p.name)}</strong>
+              <button class="mini danger" data-del-project="${esc(p.name)}">delete</button></div>
+            <div class="meta">team: ${esc(p.teamName || '—')}</div>
+            <div class="keyrow">
+              <code title="click to copy" data-copy="${esc(p.key)}">${esc(p.key)}</code>
+              <button class="mini" data-rotate="${esc(p.name)}">rotate</button>
+            </div>
+            <div class="admin-form" style="margin-top:7px">
+              <select data-set-project-team="${esc(p.name)}">${teamOpts(p.teamId)}</select>
+            </div>
+          </div>`,
+                )
+                .join('')
+            : '<div class="meta">No projects yet. Create one to get a gateway key.</div>'
+        }
+      </div>
+      <div class="admin-form">
+        <input id="npName" placeholder="new project name" />
+        <select id="npTeam">${teamOpts('')}</select>
+        <button class="mini" id="npAdd">add</button>
+      </div>
+      <div class="admin-err" id="npErr"></div>`;
+
+    // Teams
+    $('adminTeams').innerHTML = `
+      <h3>Teams</h3>
+      <div class="admin-list">
+        ${
+          data.teams.length
+            ? data.teams
+                .map(
+                  (t) => `<div class="admin-item"><div class="row1"><strong>${esc(t.name)}</strong>
+              <button class="mini danger" data-del-team="${t.id}">delete</button></div></div>`,
+                )
+                .join('')
+            : '<div class="meta">No teams yet.</div>'
+        }
+      </div>
+      <div class="admin-form">
+        <input id="ntName" placeholder="new team name" />
+        <button class="mini" id="ntAdd">add</button>
+      </div>
+      <div class="admin-err" id="ntErr"></div>`;
+
+    // Users
+    $('adminUsers').innerHTML = `
+      <h3>Users</h3>
+      <div class="admin-list">
+        ${data.users
+          .map(
+            (u) => `<div class="admin-item">
+            <div class="row1"><strong>${esc(u.username)}</strong>
+              ${u.id === auth.user.id ? '<span class="meta">you</span>' : `<button class="mini danger" data-del-user="${u.id}">delete</button>`}</div>
+            <div class="admin-form" style="margin-top:7px">
+              <select data-set-role="${u.id}">
+                <option value="member"${u.role === 'member' ? ' selected' : ''}>member</option>
+                <option value="admin"${u.role === 'admin' ? ' selected' : ''}>admin</option>
+              </select>
+              <select data-set-user-team="${u.id}">${teamOpts(u.teamId)}</select>
+            </div>
+          </div>`,
+          )
+          .join('')}
+      </div>
+      <div class="admin-form">
+        <input id="nuName" placeholder="username" />
+        <input id="nuPass" type="password" placeholder="password (min 8)" />
+      </div>
+      <div class="admin-form" style="margin-top:6px">
+        <select id="nuRole"><option value="member">member</option><option value="admin">admin</option></select>
+        <select id="nuTeam">${teamOpts('')}</select>
+        <button class="mini" id="nuAdd">add user</button>
+      </div>
+      <div class="admin-err" id="nuErr"></div>`;
+  }
+
+  // Delegated admin actions
+  $('adminPanel').addEventListener('click', async (ev) => {
+    const t = ev.target;
+    const act = async (fn, errId) => {
+      try {
+        await fn();
+        await renderAdmin();
+      } catch (err) {
+        const el = errId && $(errId);
+        if (el) {
+          el.textContent = err.message;
+        } else {
+          alert(err.message);
+        }
+      }
+    };
+    if (t.dataset.copy) {
+      navigator.clipboard?.writeText(t.dataset.copy);
+      const prev = t.textContent;
+      t.textContent = 'copied!';
+      setTimeout(() => (t.textContent = prev), 1000);
+    } else if (t.id === 'npAdd') {
+      await act(() => apiSend('POST', '/api/admin/projects', { name: $('npName').value.trim(), teamId: $('npTeam').value }), 'npErr');
+    } else if (t.dataset.rotate) {
+      if (confirm(`Rotate key for "${t.dataset.rotate}"? Apps using the old key will stop working.`))
+        await act(() => apiSend('POST', `/api/admin/projects/${encodeURIComponent(t.dataset.rotate)}/rotate`));
+    } else if (t.dataset.delProject) {
+      if (confirm(`Delete project "${t.dataset.delProject}"? Its records stay but the key stops working.`))
+        await act(() => apiSend('DELETE', `/api/admin/projects/${encodeURIComponent(t.dataset.delProject)}`));
+    } else if (t.id === 'ntAdd') {
+      await act(() => apiSend('POST', '/api/admin/teams', { name: $('ntName').value.trim() }), 'ntErr');
+    } else if (t.dataset.delTeam) {
+      await act(() => apiSend('DELETE', `/api/admin/teams/${t.dataset.delTeam}`));
+    } else if (t.id === 'nuAdd') {
+      await act(
+        () =>
+          apiSend('POST', '/api/admin/users', {
+            username: $('nuName').value.trim(),
+            password: $('nuPass').value,
+            role: $('nuRole').value,
+            teamId: $('nuTeam').value,
+          }),
+        'nuErr',
+      );
+    } else if (t.dataset.delUser) {
+      if (confirm('Delete this user?')) await act(() => apiSend('DELETE', `/api/admin/users/${t.dataset.delUser}`));
+    }
+  });
+
+  $('adminPanel').addEventListener('change', async (ev) => {
+    const t = ev.target;
+    try {
+      if (t.dataset.setProjectTeam) {
+        await apiSend('PATCH', `/api/admin/projects/${encodeURIComponent(t.dataset.setProjectTeam)}`, { teamId: t.value });
+      } else if (t.dataset.setRole) {
+        await apiSend('PATCH', `/api/admin/users/${t.dataset.setRole}`, { role: t.value });
+      } else if (t.dataset.setUserTeam) {
+        await apiSend('PATCH', `/api/admin/users/${t.dataset.setUserTeam}`, { teamId: t.value });
+      } else return;
+      await renderAdmin();
+    } catch (err) {
+      alert(err.message);
     }
   });
 

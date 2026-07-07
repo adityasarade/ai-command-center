@@ -12,6 +12,13 @@ const DEFAULTS = {
   port: DEFAULT_PORT,
   host: '127.0.0.1',
   dataDir: defaultDataDir(),
+  // Auth lifecycle: open until the first admin account exists, locked after.
+  // Set false (or start with --no-auth) to disable the auth system entirely.
+  auth: true,
+  // Browser origins allowed to call the gateway cross-origin (e.g. a web app
+  // that talks to the proxy from the browser). Same-origin + non-browser
+  // callers never need this. '*' allows any origin (not recommended).
+  allowedOrigins: [],
   // Central provider keys (optional). Pass-through of the caller's own key always wins.
   // e.g. { "openai": "sk-...", "anthropic": "sk-ant-..." }
   keys: {},
@@ -69,6 +76,7 @@ export function loadConfig(flags = {}) {
   if (flags.port != null) cli.port = Number(flags.port);
   if (flags.host != null) cli.host = flags.host;
   if (flags.dataDir != null) cli.dataDir = path.resolve(flags.dataDir);
+  if (flags.noAuth) cli.auth = false;
   layers.push(cli);
 
   const cfg = layers.reduce((acc, layer) => merge(acc, layer), {});

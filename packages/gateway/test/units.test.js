@@ -76,20 +76,44 @@ test('gemini non-SSE stream returns JSON array — last usage wins', () => {
   assert.equal(usage.output, 7);
 });
 
-test('parseProxyPath: project prefix, plain, unknown', () => {
+test('parseProxyPath: project prefix, gateway key, plain, unknown', () => {
   const table = buildProviderTable({ providers: {}, upstreams: {} });
   assert.deepEqual(parseProxyPath('/p/my%20app/openai/v1/chat/completions', table), {
+    key: null,
     project: 'my app',
     providerId: 'openai',
     rest: '/v1/chat/completions',
   });
   assert.deepEqual(parseProxyPath('/anthropic/v1/messages', table), {
+    key: null,
     project: null,
     providerId: 'anthropic',
     rest: '/v1/messages',
   });
+  assert.deepEqual(parseProxyPath('/k/aicc_secret/gemini/v1beta/models/x:generateContent', table), {
+    key: 'aicc_secret',
+    project: null,
+    providerId: 'gemini',
+    rest: '/v1beta/models/x:generateContent',
+  });
   assert.equal(parseProxyPath('/nope/v1/x', table), null);
   assert.equal(parseProxyPath('/api/stats', table), null);
+});
+
+test('pricing: qualified base-model override does NOT capture longer siblings', () => {
+  const p = new PricingEngine({ 'openai:gpt-4o': { in: 99, out: 99 } });
+  // gpt-4o-mini must keep its own (shipped) price, not the gpt-4o override
+  assert.equal(p.lookup('openai', 'gpt-4o-mini').in, 0.15);
+  assert.equal(p.lookup('openai', 'gpt-4o').in, 99);
+});
+
+test('pricing: ollama:* free default beats cross-provider plain keys', () => {
+  const p = new PricingEngine();
+  // real Ollama model names that collide with cloud plain keys must stay free
+  assert.equal(p.lookup('ollama', 'codestral:latest').in, 0);
+  assert.equal(p.lookup('ollama', 'mistral-small').out, 0);
+  // but the same names on a cloud provider keep cloud pricing
+  assert.equal(p.lookup('mistral', 'codestral').in, 0.3);
 });
 
 const rec = (ts, extra = {}) => ({

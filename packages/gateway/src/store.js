@@ -20,6 +20,17 @@ export class Store extends EventEmitter {
     fs.mkdirSync(this.dataDir, { recursive: true });
     if (fs.existsSync(this.file)) {
       const raw = fs.readFileSync(this.file, 'utf8');
+      // Repair a crash-truncated file (last line lacks a trailing newline):
+      // truncate back to the last complete record so the next append doesn't
+      // concatenate onto — and silently lose — a partial line.
+      if (raw.length && !raw.endsWith('\n')) {
+        const lastNl = raw.lastIndexOf('\n');
+        try {
+          fs.truncateSync(this.file, lastNl + 1);
+        } catch {
+          /* best effort */
+        }
+      }
       for (const line of raw.split('\n')) {
         if (!line.trim()) continue;
         try {
@@ -44,7 +55,9 @@ export class Store extends EventEmitter {
   }
 
   appendMany(records) {
-    this.records.push(...records);
+    if (!records.length) return;
+    // Avoid `push(...records)` — spreading a large array overflows the call stack.
+    for (const r of records) this.records.push(r);
     const lines = records.map((r) => JSON.stringify(r)).join('\n') + '\n';
     this._chain = this._chain
       .then(() => fs.promises.appendFile(this.file, lines, 'utf8'))

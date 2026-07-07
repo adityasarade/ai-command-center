@@ -124,6 +124,9 @@ def track(
         "ts": int(time.time() * 1000),
         **extra,
     }
+    # Drop None-valued keys so the gateway treats them as absent (and, e.g.,
+    # prices the record itself) rather than coercing null to 0.
+    record = {k: v for k, v in record.items() if v is not None}
     req = urllib.request.Request(
         f"{gw}/api/track",
         data=json.dumps(record).encode("utf-8"),

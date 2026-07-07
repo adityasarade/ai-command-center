@@ -32,10 +32,49 @@
     <div class="live" id="liveDot" title="Live event stream">
       <span class="led"></span><span class="live-label">LIVE</span>
     </div>
+    <div class="userbox" id="userBox" hidden>
+      <span class="user-name" id="userName"></span>
+      <button class="linkbtn" id="settingsBtn" hidden>settings</button>
+      <button class="linkbtn" id="logoutBtn">logout</button>
+    </div>
   </div>
 </header>
 
+<div class="callout" id="setupCallout" hidden>
+  <span>⚠ This gateway is open to anyone who can reach it. Create the admin account to enable login and per-project gateway keys.</span>
+  <button class="btn btn-sm primary" id="calloutSetupBtn">Create admin account</button>
+</div>
+
+<section id="authGate" class="empty" hidden>
+  <div class="empty-card gate-card">
+    <svg viewBox="0 0 32 32" width="42" height="42" aria-hidden="true">
+      <path d="M16 4 28 16 16 28 4 16Z" fill="none" stroke="var(--accent)" stroke-width="2"/>
+      <circle cx="16" cy="16" r="3" fill="var(--status-good)"/>
+    </svg>
+    <h1 id="gateTitle">Sign in</h1>
+    <p id="gateDesc"></p>
+    <form id="gateForm" autocomplete="on">
+      <input type="text" id="gateUser" name="username" placeholder="username" autocomplete="username" required />
+      <input type="password" id="gatePass" name="password" placeholder="password (min 8 chars)" autocomplete="current-password" required />
+      <button class="btn primary" type="submit" id="gateSubmit">Sign in</button>
+      <div class="gate-error" id="gateError" hidden></div>
+    </form>
+    <p class="hint" id="gateCancelWrap" hidden><button class="linkbtn" id="gateCancel">← back to dashboard</button></p>
+  </div>
+</section>
+
 <main id="main" hidden>
+  <section class="card admin" id="adminPanel" hidden>
+    <div class="card-head">
+      <h2>Settings — access control</h2>
+      <button class="linkbtn" id="adminClose">close ×</button>
+    </div>
+    <div class="admin-grid">
+      <div class="admin-col" id="adminProjects"></div>
+      <div class="admin-col" id="adminTeams"></div>
+      <div class="admin-col" id="adminUsers"></div>
+    </div>
+  </section>
   <section class="tiles">
     <div class="tile hero">
       <div class="tile-label">Total spend</div>

@@ -7,6 +7,8 @@ import { buildProviderTable, parseProxyPath } from './providers.js';
 import { PricingEngine } from './pricing.js';
 import { Store } from './store.js';
 import { FxService } from './fx.js';
+import { AuthService } from './auth.js';
+import { corsHeaders, originAllowed, untrustedCrossOrigin } from './cors.js';
 import { computeStats, listRequests, listProjects } from './stats.js';
 import { createProxyHandler, readBody, respondJson } from './proxy.js';
 
@@ -29,17 +31,20 @@ export function createGateway(config) {
   const store = new Store(config.dataDir).init();
   const fx = new FxService(config.dataDir, config.currency);
   fx.init().catch(() => {}); // non-blocking; get() falls back gracefully meanwhile
+  const auth = new AuthService(config.dataDir, { disabled: config.auth === false });
   const proxy = createProxyHandler({ table, config, pricing, store });
   const sseClients = new Set();
   const startedAt = Date.now();
 
   store.on('record', (record) => {
     for (const client of sseClients) {
-      client.write(`data: ${JSON.stringify(record)}\n\n`);
+      if (client.allowed == null || client.allowed.has(record.project)) {
+        client.res.write(`data: ${JSON.stringify(record)}\n\n`);
+      }
     }
   });
   const heartbeat = setInterval(() => {
-    for (const client of sseClients) client.write(': ping\n\n');
+    for (const client of sseClients) client.res.write(': ping\n\n');
   }, 25000);
   heartbeat.unref();
 
@@ -48,25 +53,39 @@ export function createGateway(config) {
     const pathname = url.pathname;
 
     try {
+      // Per-origin CORS: echo only trusted origins (same-origin, or config.allowedOrigins).
+      // Same-origin dashboard use and non-browser apps (no Origin header) always work.
+      const cors = corsHeaders(req, config);
+      for (const [k, v] of Object.entries(cors)) res.setHeader(k, v);
+
       if (req.method === 'OPTIONS') {
-        res.writeHead(204, {
-          'access-control-allow-origin': '*',
-          'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-          'access-control-allow-headers': req.headers['access-control-request-headers'] || '*',
-          'access-control-max-age': '86400',
-        });
+        const headers = { 'access-control-max-age': '600' };
+        if (req.headers.origin && originAllowed(req, config)) {
+          headers['access-control-allow-methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+          headers['access-control-allow-headers'] =
+            req.headers['access-control-request-headers'] ||
+            'authorization, content-type, x-api-key, x-goog-api-key, x-aicc-key, x-aicc-project, anthropic-version';
+        }
+        res.writeHead(204, headers);
         return res.end();
       }
 
-      // ---- dashboard & static assets ----
+      // Reject state-changing requests from untrusted cross-origin pages (CSRF /
+      // confused-deputy defense). Server-side apps send no Origin header and pass.
+      const mutating = req.method !== 'GET' && req.method !== 'HEAD';
+      if (mutating && untrustedCrossOrigin(req, config)) {
+        return respondJson(res, 403, {
+          error: { message: 'cross-origin request blocked. Add your web app origin to config.allowedOrigins to permit browser calls.' },
+        });
+      }
+
+      // ---- dashboard & static assets (open — the app gates itself via /api/auth/state) ----
       if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
         return serveStatic(res, 'index.html');
       }
       if (req.method === 'GET' && /^\/(app\.js|style\.css|logo\.svg|vendor\/chart\.umd\.js)$/.test(pathname)) {
         return serveStatic(res, pathname.slice(1));
       }
-
-      // ---- gateway API ----
       if (pathname === '/health') {
         // `name` is the product marker the CLI uses to distinguish this gateway
         // from any other local service that answers 200 on /health.
@@ -77,86 +96,145 @@ export function createGateway(config) {
           uptimeMs: Date.now() - startedAt,
         });
       }
-      if (pathname === '/api/meta') {
-        return respondJson(res, 200, {
-          name: 'AI Command Center',
-          version: PKG.version,
-          startedAt,
-          dataDir: config.dataDir,
-          currency: config.currency,
-          port: config.port,
-          providers: Object.fromEntries(
-            Object.entries(table).map(([id, p]) => [id, { kind: p.kind, upstream: p.upstream }]),
-          ),
-          records: store.records.length,
-        });
+
+      // ---- auth endpoints ----
+      if (pathname.startsWith('/api/auth/')) {
+        return await handleAuthRoutes(req, res, pathname, { auth });
       }
-      if (pathname === '/api/fx') {
-        return respondJson(res, 200, {
-          ...fx.get(),
-          default: config.currency.default,
-          options: config.currency.options,
-        });
-      }
-      if (pathname === '/api/stats') {
-        return respondJson(res, 200, computeStats(store.records, queryObj(url)));
-      }
-      if (pathname === '/api/requests') {
-        return respondJson(res, 200, listRequests(store.records, queryObj(url)));
-      }
-      if (pathname === '/api/projects') {
-        return respondJson(res, 200, listProjects(store.records));
-      }
-      if (pathname === '/api/events') {
-        res.writeHead(200, {
-          'content-type': 'text/event-stream',
-          'cache-control': 'no-cache',
-          connection: 'keep-alive',
-          'access-control-allow-origin': '*',
-        });
-        res.write(': connected\n\n');
-        sseClients.add(res);
-        req.on('close', () => sseClients.delete(res));
-        return;
-      }
-      if (pathname === '/api/track' && req.method === 'POST') {
-        return handleTrack(req, res, { store, pricing });
-      }
-      if (pathname === '/api/demo' && req.method === 'POST') {
-        let opts = {};
-        try {
-          const raw = await readBody(req, 1024 * 1024);
-          if (raw.length) opts = JSON.parse(raw.toString('utf8'));
-        } catch {
-          return respondJson(res, 400, { error: { message: 'invalid JSON body' } });
+
+      // ---- gateway API (session-gated once auth is locked) ----
+      if (pathname.startsWith('/api/')) {
+        const user = auth.sessionUser(req);
+        if (auth.locked && !user) {
+          return respondJson(res, 401, { error: { message: 'login required', code: 'auth' } });
         }
-        if (opts.clear) {
-          store.clear({ simulatedOnly: true });
+        const isAdmin = !auth.locked || user?.role === 'admin';
+        const allowed = auth.allowedProjects(user); // null = all projects
+        const visible = allowed == null ? store.records : store.records.filter((r) => allowed.has(r.project));
+
+        if (pathname === '/api/meta') {
+          return respondJson(res, 200, {
+            name: 'AI Command Center',
+            version: PKG.version,
+            startedAt,
+            dataDir: isAdmin ? config.dataDir : null,
+            currency: config.currency,
+            port: config.port,
+            providers: Object.fromEntries(
+              Object.entries(table).map(([id, p]) => [id, { kind: p.kind, upstream: p.upstream }]),
+            ),
+            records: visible.length,
+          });
         }
-        const { seedDemo } = await import('./demo.js');
-        const seeded = seedDemo(store, pricing, { days: Number(opts.days) || 14 });
-        await store.flush();
-        return respondJson(res, 200, { seeded });
-      }
-      if (pathname === '/api/records' && req.method === 'DELETE') {
-        const simulatedOnly = url.searchParams.get('simulated') === '1';
-        const removed = store.clear({ simulatedOnly });
-        await store.flush();
-        return respondJson(res, 200, { removed });
+        if (pathname === '/api/fx') {
+          return respondJson(res, 200, {
+            ...fx.get(),
+            default: config.currency.default,
+            options: config.currency.options,
+          });
+        }
+        if (pathname === '/api/stats') {
+          return respondJson(res, 200, computeStats(visible, queryObj(url)));
+        }
+        if (pathname === '/api/requests') {
+          return respondJson(res, 200, listRequests(visible, queryObj(url)));
+        }
+        if (pathname === '/api/projects') {
+          return respondJson(res, 200, listProjects(visible));
+        }
+        if (pathname === '/api/events') {
+          res.writeHead(200, {
+            'content-type': 'text/event-stream',
+            'cache-control': 'no-cache',
+            connection: 'keep-alive',
+          });
+          res.write(': connected\n\n');
+          const client = { res, allowed };
+          sseClients.add(client);
+          req.on('close', () => sseClients.delete(client));
+          return;
+        }
+        if (pathname === '/api/track' && req.method === 'POST') {
+          let forcedProject = null;
+          if (auth.locked) {
+            const keyProject = auth.projectForKey(headerValue(req, 'x-aicc-key'));
+            if (keyProject) forcedProject = keyProject.name;
+            else if (!isAdmin) {
+              return respondJson(res, 401, {
+                error: { message: 'send a valid x-aicc-key header (dashboard → settings → projects) or log in as admin' },
+              });
+            }
+          }
+          return handleTrack(req, res, { store, pricing, forcedProject });
+        }
+        if (pathname === '/api/demo' && req.method === 'POST') {
+          if (!isAdmin) return respondJson(res, 403, { error: { message: 'admin only' } });
+          let opts = {};
+          try {
+            const raw = await readBody(req, 1024 * 1024);
+            if (raw.length) opts = JSON.parse(raw.toString('utf8'));
+          } catch {
+            return respondJson(res, 400, { error: { message: 'invalid JSON body' } });
+          }
+          if (opts.clear) {
+            store.clear({ simulatedOnly: true });
+          }
+          const { seedDemo } = await import('./demo.js');
+          const days = Math.min(365, Math.max(1, Math.floor(Number(opts.days)) || 14));
+          const seeded = seedDemo(store, pricing, { days });
+          await store.flush();
+          return respondJson(res, 200, { seeded });
+        }
+        if (pathname === '/api/records' && req.method === 'DELETE') {
+          if (!isAdmin) return respondJson(res, 403, { error: { message: 'admin only' } });
+          const simulatedOnly = url.searchParams.get('simulated') === '1';
+          const removed = store.clear({ simulatedOnly });
+          await store.flush();
+          return respondJson(res, 200, { removed });
+        }
+        if (pathname.startsWith('/api/admin/')) {
+          if (!isAdmin) return respondJson(res, 403, { error: { message: 'admin only' } });
+          return await handleAdminRoutes(req, res, pathname, { auth, store });
+        }
+        return respondJson(res, 404, { error: { message: `no API route for ${pathname}` } });
       }
 
       // ---- LLM proxy ----
       const route = parseProxyPath(pathname, table);
       if (route) {
+        // Block untrusted cross-origin browser calls (covers GET too) so a
+        // malicious page can't spend the operator's keys via the proxy.
+        if (untrustedCrossOrigin(req, config)) {
+          return respondJson(res, 403, {
+            error: { message: 'cross-origin proxy request blocked. Add your web app origin to config.allowedOrigins to permit browser calls.' },
+          });
+        }
+        route.untrustedOrigin = false;
+        if (auth.locked) {
+          const key = route.key || headerValue(req, 'x-aicc-key');
+          const project = auth.projectForKey(key);
+          if (!project) {
+            return respondJson(res, 401, {
+              error: {
+                message:
+                  'AI Command Center: missing or invalid gateway key. Create a project in the dashboard (settings → projects), then use base URL /k/<key>/<provider>/… or send header x-aicc-key.',
+              },
+            });
+          }
+          route.project = project.name; // the key decides attribution
+        }
         return await proxy(req, res, route, url);
       }
 
       return respondJson(res, 404, {
         error: {
-          message: `No route for ${pathname}. Proxy paths look like /openai/v1/chat/completions, /anthropic/v1/messages, /gemini/v1beta/models/... — optionally prefixed with /p/<project-name>. Known providers: ${Object.keys(table).join(', ')}.`,
+          message: `No route for ${pathname}. Proxy paths look like /openai/v1/chat/completions, /anthropic/v1/messages, /gemini/v1beta/models/... — optionally prefixed with /p/<project-name> (or /k/<gateway-key> once auth is enabled). Known providers: ${Object.keys(table).join(', ')}.`,
         },
       });
     } catch (err) {
+      if (err?.status) {
+        return respondJson(res, err.status, { error: { message: err.message } });
+      }
       console.error('[aicc] request error:', err);
       if (!res.headersSent) {
         respondJson(res, 500, { error: { message: `gateway error: ${err.message}` } });
@@ -172,10 +250,94 @@ export function createGateway(config) {
 
   server.once('close', () => fx.stop());
 
-  return { server, store, table, pricing, fx, config, sseClients };
+  return { server, store, table, pricing, fx, auth, config, sseClients };
 }
 
-async function handleTrack(req, res, { store, pricing }) {
+// ---------------------------------------------------------------- auth routes
+async function handleAuthRoutes(req, res, pathname, { auth }) {
+  if (pathname === '/api/auth/state' && req.method === 'GET') {
+    const user = auth.sessionUser(req);
+    return respondJson(res, 200, {
+      enabled: !auth.disabled,
+      locked: auth.locked,
+      needsSetup: auth.needsSetup,
+      user: auth.publicUser(user),
+    });
+  }
+  if (pathname === '/api/auth/setup' && req.method === 'POST') {
+    if (auth.disabled) return respondJson(res, 400, { error: { message: 'auth is disabled (--no-auth)' } });
+    if (auth.db.users.length > 0) return respondJson(res, 403, { error: { message: 'setup already completed' } });
+    const body = await jsonBody(req);
+    const user = auth.createUser({ username: body.username, password: body.password, role: 'admin' });
+    res.setHeader('set-cookie', auth.issueSessionCookie(user));
+    return respondJson(res, 200, { user });
+  }
+  if (pathname === '/api/auth/login' && req.method === 'POST') {
+    const body = await jsonBody(req);
+    const user = auth.verifyLogin(body.username, body.password);
+    if (!user) return respondJson(res, 401, { error: { message: 'invalid username or password' } });
+    res.setHeader('set-cookie', auth.issueSessionCookie(user));
+    return respondJson(res, 200, { user: auth.publicUser(user) });
+  }
+  if (pathname === '/api/auth/logout' && req.method === 'POST') {
+    res.setHeader('set-cookie', auth.clearSessionCookie());
+    return respondJson(res, 200, { ok: true });
+  }
+  return respondJson(res, 404, { error: { message: 'no such auth route' } });
+}
+
+// --------------------------------------------------------------- admin routes
+async function handleAdminRoutes(req, res, pathname, { auth, store }) {
+  const seg = pathname.slice('/api/admin/'.length).split('/').map(decodeURIComponent);
+
+  if (pathname === '/api/admin/overview' && req.method === 'GET') {
+    const teamName = (id) => auth.db.teams.find((t) => t.id === id)?.name ?? null;
+    return respondJson(res, 200, {
+      users: auth.db.users.map((u) => auth.publicUser(u)),
+      teams: auth.db.teams,
+      projects: auth.db.projects.map((p) => ({ ...p, teamName: teamName(p.teamId) })),
+      knownProjects: listProjects(store.records).map((p) => p.project),
+    });
+  }
+  if (seg[0] === 'users' && req.method === 'POST' && seg.length === 1) {
+    const body = await jsonBody(req);
+    return respondJson(res, 200, { user: auth.createUser(body) });
+  }
+  if (seg[0] === 'users' && req.method === 'PATCH' && seg.length === 2) {
+    const body = await jsonBody(req);
+    return respondJson(res, 200, { user: auth.updateUser(seg[1], body) });
+  }
+  if (seg[0] === 'users' && req.method === 'DELETE' && seg.length === 2) {
+    auth.deleteUser(seg[1]);
+    return respondJson(res, 200, { ok: true });
+  }
+  if (seg[0] === 'teams' && req.method === 'POST' && seg.length === 1) {
+    const body = await jsonBody(req);
+    return respondJson(res, 200, { team: auth.createTeam(body.name) });
+  }
+  if (seg[0] === 'teams' && req.method === 'DELETE' && seg.length === 2) {
+    auth.deleteTeam(seg[1]);
+    return respondJson(res, 200, { ok: true });
+  }
+  if (seg[0] === 'projects' && req.method === 'POST' && seg.length === 1) {
+    const body = await jsonBody(req);
+    return respondJson(res, 200, { project: auth.createProject(body.name, body.teamId || null) });
+  }
+  if (seg[0] === 'projects' && req.method === 'PATCH' && seg.length === 2) {
+    const body = await jsonBody(req);
+    return respondJson(res, 200, { project: auth.updateProject(seg[1], body) });
+  }
+  if (seg[0] === 'projects' && req.method === 'POST' && seg.length === 3 && seg[2] === 'rotate') {
+    return respondJson(res, 200, { project: auth.rotateProjectKey(seg[1]) });
+  }
+  if (seg[0] === 'projects' && req.method === 'DELETE' && seg.length === 2) {
+    auth.deleteProject(seg[1]);
+    return respondJson(res, 200, { ok: true });
+  }
+  return respondJson(res, 404, { error: { message: 'no such admin route' } });
+}
+
+async function handleTrack(req, res, { store, pricing, forcedProject = null }) {
   let payload;
   try {
     payload = JSON.parse((await readBody(req, 5 * 1024 * 1024)).toString('utf8'));
@@ -209,7 +371,7 @@ async function handleTrack(req, res, { store, pricing }) {
       store.append({
         id: 'trk_' + crypto.randomUUID().replaceAll('-', '').slice(0, 20),
         ts: numOrNull(item.ts) ?? Date.now(),
-        project: String(item.project || 'default'),
+        project: forcedProject || String(item.project || 'default'),
         provider,
         model,
         endpoint: item.endpoint ? String(item.endpoint) : '/api/track',
@@ -235,7 +397,26 @@ async function handleTrack(req, res, { store, pricing }) {
   respondJson(res, 200, { saved: saved.length });
 }
 
+async function jsonBody(req) {
+  try {
+    const raw = await readBody(req, 1024 * 1024);
+    return raw.length ? JSON.parse(raw.toString('utf8')) : {};
+  } catch {
+    const err = new Error('invalid JSON body');
+    err.status = 400;
+    throw err;
+  }
+}
+
+function headerValue(req, name) {
+  const v = req.headers[name];
+  return Array.isArray(v) ? v[0] : v;
+}
+
 function numOrNull(v) {
+  // Treat null/undefined/'' as absent — Number(null) is 0, which would otherwise
+  // record real usage at $0 and skip the pricing engine.
+  if (v == null || v === '') return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
