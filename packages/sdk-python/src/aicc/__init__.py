@@ -37,16 +37,27 @@ _session: Optional["AiccSession"] = None
 class AiccSession:
     gateway: str
     project: str
+    key: Optional[str] = None
     env: Dict[str, str] = field(default_factory=dict)
+
+    def _base(self) -> str:
+        # With auth enabled the gateway key both authenticates and attributes the
+        # call; without it, the project name in the path does the grouping.
+        return (
+            f"{self.gateway}/k/{quote(self.key, safe='')}"
+            if self.key
+            else f"{self.gateway}/p/{quote(self.project, safe='')}"
+        )
 
     def url(self, provider: str) -> str:
         """Gateway base URL for any provider, e.g. url('openai') or url('ollama')."""
-        base = f"{self.gateway}/p/{quote(self.project, safe='')}/{provider}"
+        base = f"{self._base()}/{provider}"
         return base + "/v1" if provider not in ("anthropic", "gemini") else base
 
 
 def init(
     project: str = "default",
+    key: Optional[str] = None,
     gateway: Optional[str] = None,
     check: bool = True,
 ) -> AiccSession:
@@ -56,12 +67,15 @@ def init(
     read their base-URL environment variables at construction time.
 
     project  – how calls are grouped on the dashboard.
+    key      – project gateway key (required when the gateway has auth enabled;
+               defaults to $AICC_KEY). Get it from the dashboard → settings.
     gateway  – gateway origin; defaults to $AICC_GATEWAY or http://localhost:4321.
     check    – ping the gateway and print a warning if it is unreachable.
     """
     global _session
     gw = (gateway or os.environ.get("AICC_GATEWAY") or DEFAULT_GATEWAY).rstrip("/")
-    base = f"{gw}/p/{quote(project, safe='')}"
+    key = key or os.environ.get("AICC_KEY") or None
+    base = f"{gw}/k/{quote(key, safe='')}" if key else f"{gw}/p/{quote(project, safe='')}"
 
     env = {
         "OPENAI_BASE_URL": f"{base}/openai/v1",
@@ -70,7 +84,7 @@ def init(
         "GOOGLE_GEMINI_BASE_URL": f"{base}/gemini",
     }
     os.environ.update(env)
-    _session = AiccSession(gateway=gw, project=project, env=env)
+    _session = AiccSession(gateway=gw, project=project, key=key, env=env)
 
     if check:
         try:
@@ -111,6 +125,7 @@ def track(
     unreachable (never raises — telemetry must not break the host app).
     """
     gw = _session.gateway if _session else (os.environ.get("AICC_GATEWAY") or DEFAULT_GATEWAY).rstrip("/")
+    gw_key = (_session.key if _session else None) or os.environ.get("AICC_KEY")
     record = {
         "project": project or (_session.project if _session else "default"),
         "provider": provider,
@@ -127,10 +142,13 @@ def track(
     # Drop None-valued keys so the gateway treats them as absent (and, e.g.,
     # prices the record itself) rather than coercing null to 0.
     record = {k: v for k, v in record.items() if v is not None}
+    headers = {"Content-Type": "application/json"}
+    if gw_key:
+        headers["x-aicc-key"] = gw_key
     req = urllib.request.Request(
         f"{gw}/api/track",
         data=json.dumps(record).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:

@@ -105,7 +105,13 @@ export function createGateway(config) {
       // ---- gateway API (session-gated once auth is locked) ----
       if (pathname.startsWith('/api/')) {
         const user = auth.sessionUser(req);
-        if (auth.locked && !user) {
+        // /api/track is a machine endpoint: a valid project gateway key
+        // authorizes it even without a dashboard session.
+        const trackKeyProject =
+          pathname === '/api/track' && auth.locked
+            ? auth.projectForKey(headerValue(req, 'x-aicc-key'))
+            : null;
+        if (auth.locked && !user && !trackKeyProject) {
           return respondJson(res, 401, { error: { message: 'login required', code: 'auth' } });
         }
         const isAdmin = !auth.locked || user?.role === 'admin';
@@ -155,15 +161,13 @@ export function createGateway(config) {
           return;
         }
         if (pathname === '/api/track' && req.method === 'POST') {
-          let forcedProject = null;
-          if (auth.locked) {
-            const keyProject = auth.projectForKey(headerValue(req, 'x-aicc-key'));
-            if (keyProject) forcedProject = keyProject.name;
-            else if (!isAdmin) {
-              return respondJson(res, 401, {
-                error: { message: 'send a valid x-aicc-key header (dashboard → settings → projects) or log in as admin' },
-              });
-            }
+          // A gateway key forces attribution to its project; an admin session may
+          // post arbitrary records (batch jobs, backfills).
+          const forcedProject = trackKeyProject?.name || null;
+          if (auth.locked && !forcedProject && !isAdmin) {
+            return respondJson(res, 401, {
+              error: { message: 'send a valid x-aicc-key header (dashboard → settings → projects) or log in as admin' },
+            });
           }
           return handleTrack(req, res, { store, pricing, forcedProject });
         }

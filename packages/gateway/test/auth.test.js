@@ -115,6 +115,30 @@ test('locked proxy requires a valid gateway key; key sets attribution', async ()
   assert.equal(store.records.at(-1).project, 'billing-svc');
 });
 
+test('locked /api/track accepts a gateway key without any session', async () => {
+  const admin = makeClient();
+  await admin('POST', '/api/auth/login', { username: 'aditya', password: 'supersecret' });
+  const proj = await (await admin('POST', '/api/admin/projects', { name: 'batch-svc' })).json();
+  const key = proj.project.key;
+  const n = store.records.length;
+  // no cookie, just the key header (what a server-side batch job sends)
+  const res = await fetch(`${base}/api/track`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-aicc-key': key },
+    body: JSON.stringify({ project: 'SPOOFED', provider: 'openai', model: 'gpt-4o', tokensIn: 500, tokensOut: 50 }),
+  });
+  assert.equal(res.status, 200);
+  await waitForRecords(n + 1);
+  assert.equal(store.records.at(-1).project, 'batch-svc'); // key wins over body project
+  // without a key and without a session → 401
+  const noAuth = await fetch(`${base}/api/track`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ provider: 'openai', tokensIn: 1 }),
+  });
+  assert.equal(noAuth.status, 401);
+});
+
 test('member sees only their team’s projects', async () => {
   const admin = makeClient();
   await admin('POST', '/api/auth/login', { username: 'aditya', password: 'supersecret' });

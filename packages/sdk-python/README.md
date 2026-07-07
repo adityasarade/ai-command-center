@@ -12,6 +12,13 @@ from openai import OpenAI
 client = OpenAI()                   # unchanged code, now fully tracked
 ```
 
+If the gateway has login enabled, pass the project's gateway key (from the
+dashboard → settings, or `$AICC_KEY`):
+
+```python
+aicc.init(project="invoice-bot", key="aicc_…")   # or set AICC_KEY in the env
+```
+
 The SDK only sets standard environment variables (`OPENAI_BASE_URL`,
 `ANTHROPIC_BASE_URL`, `GOOGLE_GEMINI_BASE_URL`) — you can also set those by
 hand and skip this package entirely. Your API keys never change hands.

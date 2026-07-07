@@ -5,9 +5,10 @@ const DEFAULT_GATEWAY = 'http://localhost:4321';
 
 let session = null;
 
-function init({ project = 'default', gateway, check = true } = {}) {
+function init({ project = 'default', key, gateway, check = true } = {}) {
   const gw = (gateway || process.env.AICC_GATEWAY || DEFAULT_GATEWAY).replace(/\/+$/, '');
-  const base = `${gw}/p/${encodeURIComponent(project)}`;
+  const gwKey = key || process.env.AICC_KEY || null;
+  const base = gwKey ? `${gw}/k/${encodeURIComponent(gwKey)}` : `${gw}/p/${encodeURIComponent(project)}`;
 
   process.env.OPENAI_BASE_URL = `${base}/openai/v1`;
   process.env.ANTHROPIC_BASE_URL = `${base}/anthropic`;
@@ -16,6 +17,7 @@ function init({ project = 'default', gateway, check = true } = {}) {
   session = {
     gateway: gw,
     project,
+    key: gwKey,
     url(provider) {
       const u = `${base}/${provider}`;
       return provider === 'anthropic' || provider === 'gemini' ? u : `${u}/v1`;
@@ -40,10 +42,11 @@ function url(provider) {
 
 async function track(record = {}) {
   const gw = session?.gateway || (process.env.AICC_GATEWAY || DEFAULT_GATEWAY).replace(/\/+$/, '');
+  const gwKey = session?.key || process.env.AICC_KEY || null;
   try {
     const res = await fetch(`${gw}/api/track`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...(gwKey ? { 'x-aicc-key': gwKey } : {}) },
       body: JSON.stringify({
         project: session?.project || 'default',
         ts: Date.now(),
