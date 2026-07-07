@@ -7,6 +7,7 @@ import { loadConfig } from '../src/config.js';
 import { startGateway } from '../src/server.js';
 import { Store } from '../src/store.js';
 import { PricingEngine } from '../src/pricing.js';
+import { FxService } from '../src/fx.js';
 import { seedDemo } from '../src/demo.js';
 import { computeStats } from '../src/stats.js';
 
@@ -160,24 +161,31 @@ async function cmdStats() {
   const config = loadConfig(flags);
   const range = flags.range || '7d';
   let stats;
+  let fx;
   const live = await liveGateway(config);
   if (live) {
     const res = await fetch(`${live}/api/stats?range=${range}`);
     if (!res.ok) throw new Error(`gateway error: HTTP ${res.status}`);
     stats = await res.json();
+    fx = await fetch(`${live}/api/fx`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   } else {
     const store = new Store(config.dataDir).init();
     stats = computeStats(store.records, { range });
   }
+  fx ??= { ...new FxService(config.dataDir, config.currency).get(), default: config.currency.default };
   if (flags.json) {
-    console.log(JSON.stringify(stats, null, 2));
+    console.log(JSON.stringify({ ...stats, fx }, null, 2));
     return;
   }
+  const code = fx.default || 'USD';
+  const rate = fx.rates?.[code] ?? 1;
+  const money = (vUsd) => fmtCur((vUsd || 0) * rate, code);
   const t = stats.totals;
   console.log('');
   console.log(`  ${bold(cyan('AI Command Center'))} ${dim(`— last ${range}`)}`);
   console.log('');
-  console.log(`  Spend        ${bold(fmtUsd(t.costUsd))}`);
+  const usdNote = code !== 'USD' ? dim(` (≈ ${fmtUsd(t.costUsd)}${fx.stale ? ', approx fx' : ''})`) : '';
+  console.log(`  Spend        ${bold(money(t.costUsd))}${usdNote}`);
   console.log(`  Requests     ${bold(String(t.requests))} ${t.errors ? red(`(${t.errors} errors)`) : ''}`);
   console.log(`  Tokens       ${bold(fmtNum(t.tokens))} ${dim(`(${fmtNum(t.tokensIn)} in / ${fmtNum(t.tokensOut)} out)`)}`);
   console.log(`  Latency      p50 ${t.p50LatencyMs}ms · p95 ${t.p95LatencyMs}ms`);
@@ -186,7 +194,7 @@ async function cmdStats() {
     console.log(`  ${bold('By project')}`);
     for (const p of stats.byProject.slice(0, 10)) {
       console.log(
-        `    ${p.project.padEnd(24)} ${fmtUsd(p.costUsd).padStart(10)}  ${String(p.requests).padStart(6)} reqs  ${dim(p.topModel || '')}`,
+        `    ${p.project.padEnd(24)} ${money(p.costUsd).padStart(12)}  ${String(p.requests).padStart(6)} reqs  ${dim(p.topModel || '')}`,
       );
     }
     console.log('');
@@ -248,6 +256,16 @@ function fmtUsd(v) {
   if (v == null) return '$0.00';
   if (v > 0 && v < 0.01) return `$${v.toFixed(4)}`;
   return `$${v.toFixed(2)}`;
+}
+
+function fmtCur(v, code) {
+  const digits = v !== 0 && Math.abs(v) < 0.01 ? 4 : 2;
+  return new Intl.NumberFormat(code === 'INR' ? 'en-IN' : 'en-US', {
+    style: 'currency',
+    currency: code,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(v);
 }
 
 function fmtNum(v) {

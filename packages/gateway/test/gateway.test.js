@@ -39,7 +39,8 @@ before(async () => {
     },
     upstreams: { openai: mock.url, anthropic: mock.url, gemini: mock.url },
     pricing: { 'custom-finetune': { in: 100, out: 200 } },
-    currency: { code: 'USD', perUsd: 1 },
+    // manual rates keep tests hermetic — no live FX fetch
+    currency: { default: 'INR', options: ['INR', 'USD', 'EUR'], rates: { INR: 80, EUR: 0.9 } },
   };
   gw = createGateway(config);
   store = gw.store;
@@ -291,6 +292,15 @@ test('/api/stats aggregates and buckets', async () => {
   const reqs = await (await fetch(`${base}/api/requests?limit=5`)).json();
   assert.equal(reqs.items.length, 5);
   assert.ok(reqs.items[0].ts >= reqs.items.at(-1).ts, 'newest first');
+});
+
+test('/api/fx serves configured manual rates', async () => {
+  const fx = await (await fetch(`${base}/api/fx`)).json();
+  assert.equal(fx.default, 'INR');
+  assert.equal(fx.rates.INR, 80);
+  assert.equal(fx.rates.USD, 1);
+  assert.equal(fx.source, 'config');
+  assert.deepEqual(fx.options, ['INR', 'USD', 'EUR']);
 });
 
 test('records persist to JSONL and reload', async () => {

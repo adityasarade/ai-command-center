@@ -24,9 +24,10 @@ const DEFAULTS = {
   // Pricing overrides / additions, USD per 1M tokens, longest-prefix match on model name.
   // e.g. { "my-finetune": { "in": 1.0, "out": 4.0 }, "openrouter:*": { "in": 0, "out": 0 } }
   pricing: {},
-  // Display currency for the dashboard (data is always stored in USD).
-  // e.g. { "code": "INR", "perUsd": 84 }
-  currency: { code: 'USD', perUsd: 1 },
+  // Display currency (data is always stored in USD; conversion is display-time).
+  // default: initial dashboard currency; options: toggle choices;
+  // rates: optional manual { INR: 84, EUR: 0.92 } — set it to skip live FX fetching.
+  currency: { default: 'INR', options: ['INR', 'USD', 'EUR'], rates: null },
 };
 
 function readJsonIfExists(file) {
@@ -74,7 +75,23 @@ export function loadConfig(flags = {}) {
   if (!Number.isInteger(cfg.port) || cfg.port < 0 || cfg.port > 65535) {
     throw new Error(`Invalid port: ${cfg.port}`);
   }
+  normalizeCurrency(cfg);
   return cfg;
+}
+
+/** Back-compat: accept the earlier { code, perUsd } currency shape. */
+function normalizeCurrency(cfg) {
+  const cur = (cfg.currency ??= {});
+  if (cur.code && !cur.default) {
+    cur.default = cur.code;
+    if (cur.perUsd && cur.code !== 'USD') {
+      cur.rates = { ...(cur.rates || {}), [cur.code]: cur.perUsd };
+    }
+  }
+  cur.default ||= 'INR';
+  cur.options ||= ['INR', 'USD', 'EUR'];
+  if (!cur.options.includes(cur.default)) cur.options.unshift(cur.default);
+  if (!cur.options.includes('USD')) cur.options.push('USD');
 }
 
 function merge(base, extra) {

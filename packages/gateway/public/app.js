@@ -53,9 +53,25 @@
   Chart.register(barValueLabels);
 
   // ------------------------------------------------------------ helpers
-  const fmtUsd = (v, opts = {}) => {
+  const CUR_SYMBOLS = { INR: '₹', USD: '$', EUR: '€' };
+
+  // All stored values are USD; display converts via the gateway's live FX rates.
+  const fmtMoney = (vUsd) => {
+    if (vUsd == null || Number.isNaN(vUsd)) return '—';
+    const cur = state.cur || 'USD';
+    const rate = state.fx?.rates?.[cur] ?? 1;
+    const v = vUsd * rate;
+    const locale = cur === 'INR' ? 'en-IN' : 'en-US';
+    const nf = (opts) =>
+      new Intl.NumberFormat(locale, { style: 'currency', currency: cur, ...opts }).format(v);
+    const abs = Math.abs(v);
+    if (v !== 0 && abs < 0.01) return nf({ minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    if (abs >= 100000) return nf({ notation: 'compact', maximumFractionDigits: 1 }); // ₹1.2L / $120k
+    return nf({ maximumFractionDigits: 2 });
+  };
+  const fmtUsdPlain = (v) => {
     if (v == null || Number.isNaN(v)) return '—';
-    if (v !== 0 && Math.abs(v) < 0.01 && !opts.coarse) return '$' + v.toFixed(4);
+    if (v !== 0 && Math.abs(v) < 0.01) return '$' + v.toFixed(4);
     if (Math.abs(v) >= 1000) return '$' + (v / 1000).toFixed(1) + 'k';
     return '$' + v.toFixed(2);
   };
@@ -92,7 +108,14 @@
   }
 
   // ------------------------------------------------------------ state
-  const state = { range: '7d', project: '', q: '', errorsOnly: false };
+  const state = {
+    range: '7d',
+    project: '',
+    q: '',
+    errorsOnly: false,
+    cur: localStorage.getItem('aicc-currency') || null,
+    fx: null,
+  };
   const charts = {};
   let meta = null;
   let colorMap = new Map();
@@ -116,8 +139,12 @@
   // ------------------------------------------------------------ rendering
   function renderTiles(stats, prev) {
     const t = stats.totals;
-    $('tSpend').textContent = fmtUsd(t.costUsd, { coarse: t.costUsd >= 0.01 });
-    $('tSpendSub').innerHTML = deltaHtml(t.costUsd, prev?.totals?.costUsd, { moreIsBad: true }) + spendFx(t.costUsd);
+    $('tSpend').textContent = fmtMoney(t.costUsd);
+    const fxNote =
+      state.cur && state.cur !== 'USD'
+        ? ` <span class="t-dim">≈ ${fmtUsdPlain(t.costUsd)}${state.fx?.stale ? ' · approx fx' : ''}</span>`
+        : '';
+    $('tSpendSub').innerHTML = deltaHtml(t.costUsd, prev?.totals?.costUsd, { moreIsBad: true }) + fxNote;
     $('tReqs').textContent = fmtNum(t.requests);
     $('tReqsSub').innerHTML = t.errors
       ? `<span class="err-count">${fmtNum(t.errors)} errors (${(t.errorRate * 100).toFixed(1)}%)</span>`
@@ -130,10 +157,15 @@
     $('tProjectsSub').textContent = `${stats.byModel.length} models · ${stats.byProvider.length} providers`;
   }
 
-  function spendFx(usd) {
-    if (!meta || !meta.currency || meta.currency.code === 'USD' || !usd) return '';
-    const v = usd * meta.currency.perUsd;
-    return ` <span class="t-dim">≈ ${meta.currency.code} ${v >= 1000 ? fmtNum(v) : v.toFixed(2)}</span>`;
+  function renderCurSeg() {
+    const seg = $('curSeg');
+    const options = state.fx?.options || ['INR', 'USD', 'EUR'];
+    seg.innerHTML = options
+      .map(
+        (c) =>
+          `<button data-cur="${c}" role="tab" class="${c === state.cur ? 'on' : ''}" title="Show amounts in ${c}">${CUR_SYMBOLS[c] || c}</button>`,
+      )
+      .join('');
   }
 
   function deltaHtml(cur, prevVal, { moreIsBad }) {
@@ -188,15 +220,15 @@
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { stacked: true, grid: { display: false }, ticks: { maxTicksLimit: 12, maxRotation: 0 } },
-          y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => fmtUsd(v, { coarse: v >= 0.01 }), maxTicksLimit: 6 }, border: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => fmtMoney(v), maxTicksLimit: 6 }, border: { display: false } },
         },
         plugins: {
           legend: { position: 'bottom', labels: { padding: 14 } },
           tooltip: {
             callbacks: {
               title: (items) => (items.length ? fmtBucketFull(points[items[0].dataIndex].t, bucketMs) : ''),
-              label: (item) => ` ${item.dataset.label}: ${fmtUsd(item.parsed.y)}`,
-              footer: (items) => 'total ' + fmtUsd(items.reduce((s, i) => s + i.parsed.y, 0)),
+              label: (item) => ` ${item.dataset.label}: ${fmtMoney(item.parsed.y)}`,
+              footer: (items) => 'total ' + fmtMoney(items.reduce((s, i) => s + i.parsed.y, 0)),
             },
           },
         },
@@ -228,12 +260,12 @@
         },
         plugins: {
           legend: { display: false },
-          barValueLabels: { format: (v) => fmtUsd(v) },
+          barValueLabels: { format: (v) => fmtMoney(v) },
           tooltip: {
             callbacks: {
               label: (item) => {
                 const r = rows[item.dataIndex];
-                return ` ${fmtUsd(r.costUsd)} · ${fmtNum(r.requests)} reqs · ${fmtNum(r.tokens)} tokens`;
+                return ` ${fmtMoney(r.costUsd)} · ${fmtNum(r.requests)} reqs · ${fmtNum(r.tokens)} tokens`;
               },
             },
           },
@@ -266,13 +298,13 @@
         },
         plugins: {
           legend: { display: false },
-          barValueLabels: { format: (v) => fmtUsd(v) },
+          barValueLabels: { format: (v) => fmtMoney(v) },
           tooltip: {
             callbacks: {
               title: (items) => rows[items[0].dataIndex].model,
               label: (item) => {
                 const r = rows[item.dataIndex];
-                return ` ${r.provider} · ${fmtUsd(r.costUsd)} · ${fmtNum(r.requests)} reqs`;
+                return ` ${r.provider} · ${fmtMoney(r.costUsd)} · ${fmtNum(r.requests)} reqs`;
               },
             },
           },
@@ -336,7 +368,7 @@
       <div class="provider-row">
         <span class="provider-name" title="${esc(r.provider)}">${esc(r.provider)}</span>
         <span class="provider-bar"><i style="width:${Math.max(2, (r.costUsd / max) * 100)}%"></i></span>
-        <span class="provider-val">${fmtUsd(r.costUsd)} · ${fmtNum(r.requests)}</span>
+        <span class="provider-val">${fmtMoney(r.costUsd)} · ${fmtNum(r.requests)}</span>
       </div>`,
       )
       .join('') || '<div class="feed-empty">No traffic in range.</div>';
@@ -350,7 +382,7 @@
       <td><span class="dot" style="background:${projectColor(r.project)}"></span>${esc(r.project)}${r.simulated ? '<span class="tag">demo</span>' : ''}</td>
       <td><span class="t-dim">${esc(r.provider)} ·</span> ${esc(model)}${r.stream ? '<span class="tag">stream</span>' : ''}</td>
       <td class="num">${r.tokensTotal != null ? `${fmtNum(r.tokensIn)} <span class="t-dim">→</span> ${fmtNum(r.tokensOut)}` : '<span class="t-dim">—</span>'}</td>
-      <td class="num t-cost">${r.costUsd != null ? fmtUsd(r.costUsd) : '<span class="t-dim">—</span>'}</td>
+      <td class="num t-cost">${r.costUsd != null ? fmtMoney(r.costUsd) : '<span class="t-dim">—</span>'}</td>
       <td class="num">${fmtMs(r.latencyMs)}</td>
       <td><span class="status${err ? ' err' : ''}">${err ? (r.status || 'ERR') + (r.errorType === 'client_abort' ? ' abort' : '') : r.status}</span></td>`;
   }
@@ -382,7 +414,16 @@
   }
 
   function renderFooter(stats) {
-    $('footMeta').textContent = meta ? `v${meta.version} · data: ${meta.dataDir} · gateway http://localhost:${meta.port}` : '';
+    let fxInfo = '';
+    if (state.fx && state.cur !== 'USD') {
+      const age = state.fx.fetchedAt
+        ? `, updated ${Math.max(0, Math.round((Date.now() - state.fx.fetchedAt) / 3600e3))}h ago`
+        : '';
+      fxInfo = ` · fx: ${state.fx.source}${age}${state.fx.stale ? ' (stale)' : ''}`;
+    }
+    $('footMeta').textContent = meta
+      ? `v${meta.version} · data: ${meta.dataDir} · gateway http://localhost:${meta.port}${fxInfo}`
+      : '';
     const unpriced = stats.totals.unpriced;
     const chipU = $('unpricedChip');
     chipU.hidden = !unpriced;
@@ -408,13 +449,17 @@
       if (state.q) reqQ.set('q', state.q);
       if (state.errorsOnly) reqQ.set('errorsOnly', '1');
 
-      const [m, stats, requests, projects] = await Promise.all([
+      const [m, fx, stats, requests, projects] = await Promise.all([
         api('/api/meta'),
+        api('/api/fx'),
         api('/api/stats?' + statsQ),
         api('/api/requests?' + reqQ),
         api('/api/projects'),
       ]);
       meta = m;
+      state.fx = fx;
+      if (!state.cur || !fx.options.includes(state.cur)) state.cur = fx.default;
+      renderCurSeg();
       $('metaVersion').textContent = 'v' + m.version;
 
       const empty = m.records === 0;
@@ -489,6 +534,15 @@
     state.range = btn.dataset.range;
     for (const b of $('rangeSeg').children) b.classList.toggle('on', b === btn);
     loadAll(false);
+  });
+
+  $('curSeg').addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button[data-cur]');
+    if (!btn) return;
+    state.cur = btn.dataset.cur;
+    localStorage.setItem('aicc-currency', state.cur);
+    renderCurSeg();
+    loadAll(false); // re-render everything in the new currency
   });
 
   $('projectSel').addEventListener('change', (ev) => {

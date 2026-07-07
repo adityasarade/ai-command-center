@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { buildProviderTable, parseProxyPath } from './providers.js';
 import { PricingEngine } from './pricing.js';
 import { Store } from './store.js';
+import { FxService } from './fx.js';
 import { computeStats, listRequests, listProjects } from './stats.js';
 import { createProxyHandler, readBody, respondJson } from './proxy.js';
 
@@ -26,6 +27,8 @@ export function createGateway(config) {
   const table = buildProviderTable(config);
   const pricing = new PricingEngine(config.pricing);
   const store = new Store(config.dataDir).init();
+  const fx = new FxService(config.dataDir, config.currency);
+  fx.init().catch(() => {}); // non-blocking; get() falls back gracefully meanwhile
   const proxy = createProxyHandler({ table, config, pricing, store });
   const sseClients = new Set();
   const startedAt = Date.now();
@@ -86,6 +89,13 @@ export function createGateway(config) {
             Object.entries(table).map(([id, p]) => [id, { kind: p.kind, upstream: p.upstream }]),
           ),
           records: store.records.length,
+        });
+      }
+      if (pathname === '/api/fx') {
+        return respondJson(res, 200, {
+          ...fx.get(),
+          default: config.currency.default,
+          options: config.currency.options,
         });
       }
       if (pathname === '/api/stats') {
@@ -160,7 +170,9 @@ export function createGateway(config) {
   server.requestTimeout = 0;
   server.headersTimeout = 60_000;
 
-  return { server, store, table, pricing, config, sseClients };
+  server.once('close', () => fx.stop());
+
+  return { server, store, table, pricing, fx, config, sseClients };
 }
 
 async function handleTrack(req, res, { store, pricing }) {
