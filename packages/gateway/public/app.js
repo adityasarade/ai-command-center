@@ -454,12 +454,24 @@
   }
 
   // ------------------------------------------------------------ auth flow
+  let brandingApplied = false;
+  function applyBranding(b) {
+    if (!b || brandingApplied) return;
+    brandingApplied = true;
+    if (b.name) {
+      document.querySelector('.wordmark').textContent = b.name;
+      document.title = b.name;
+    }
+    if (b.accent) document.documentElement.style.setProperty('--accent', b.accent);
+  }
+
   async function refreshAuth() {
     try {
       auth = await api('/api/auth/state');
     } catch {
       auth = { enabled: false, locked: false, needsSetup: false, user: null };
     }
+    applyBranding(auth.branding);
     const box = $('userBox');
     if (auth.user) {
       box.hidden = false;

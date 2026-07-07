@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PRESETS_DIR = path.join(__dirname, '..', 'presets');
 
 export const DEFAULT_PORT = 4321;
 
@@ -35,6 +39,14 @@ const DEFAULTS = {
   // default: initial dashboard currency; options: toggle choices;
   // rates: optional manual { INR: 84, EUR: 0.92 } — set it to skip live FX fetching.
   currency: { default: 'INR', options: ['INR', 'USD', 'EUR'], rates: null },
+  // Dashboard/CLI branding — override for a company build (see presets/).
+  branding: {
+    name: 'AI Command Center',
+    short: 'AICC',
+    tagline: 'One gateway, every AI project, one dashboard.',
+    accent: '#3987e5',
+    productUrl: 'https://github.com/adityasarade/ai-command-center',
+  },
 };
 
 function readJsonIfExists(file) {
@@ -47,23 +59,51 @@ function readJsonIfExists(file) {
   }
 }
 
+/** List the built-in preset names (files in presets/). */
+export function listPresets() {
+  try {
+    return fs.readdirSync(PRESETS_DIR).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''));
+  } catch {
+    return [];
+  }
+}
+
+function loadPreset(name) {
+  const file = path.join(PRESETS_DIR, `${path.basename(name)}.json`);
+  const preset = readJsonIfExists(file);
+  if (!preset) {
+    throw new Error(`Unknown preset "${name}". Available: ${listPresets().join(', ') || '(none)'}`);
+  }
+  return preset;
+}
+
 /**
  * Load config with precedence (lowest → highest):
- *   defaults < ~/.ai-command-center/config.json < ./aicc.config.json < --config file < env < CLI flags
+ *   defaults < preset < ~/.ai-command-center/config.json < ./aicc.config.json < --config file < env < CLI flags
+ * A preset (company build) is chosen via --preset, $AICC_PRESET, or a "preset"
+ * key in any config file; it seeds branding/currency/etc. that user config overrides.
  */
 export function loadConfig(flags = {}) {
   const layers = [DEFAULTS];
 
-  const homeCfg = readJsonIfExists(path.join(defaultDataDir(), 'config.json'));
-  if (homeCfg) layers.push(homeCfg);
+  // Resolve the preset name from flags/env, or from a "preset" key in a config file.
+  const homeCfgRaw = readJsonIfExists(path.join(defaultDataDir(), 'config.json'));
+  const cwdCfgRaw = readJsonIfExists(path.resolve(process.cwd(), 'aicc.config.json'));
+  const fileCfgRaw = flags.config ? readJsonIfExists(path.resolve(flags.config)) : null;
+  const presetName =
+    flags.preset ||
+    process.env.AICC_PRESET ||
+    fileCfgRaw?.preset ||
+    cwdCfgRaw?.preset ||
+    homeCfgRaw?.preset ||
+    null;
+  if (presetName) layers.push(loadPreset(presetName));
 
-  const cwdCfg = readJsonIfExists(path.resolve(process.cwd(), 'aicc.config.json'));
-  if (cwdCfg) layers.push(cwdCfg);
-
+  if (homeCfgRaw) layers.push(homeCfgRaw);
+  if (cwdCfgRaw) layers.push(cwdCfgRaw);
   if (flags.config) {
-    const fileCfg = readJsonIfExists(path.resolve(flags.config));
-    if (!fileCfg) throw new Error(`Config file not found: ${flags.config}`);
-    layers.push(fileCfg);
+    if (!fileCfgRaw) throw new Error(`Config file not found: ${flags.config}`);
+    layers.push(fileCfgRaw);
   }
 
   const env = {};

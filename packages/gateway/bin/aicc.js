@@ -80,9 +80,10 @@ async function cmdStart() {
   const gateway = await startGateway(config);
   const url = `http://${displayHost(config.host)}:${config.port}`;
 
+  const brand = config.branding || {};
   console.log('');
-  console.log(`  ${bold(cyan('◆ AI Command Center'))} ${dim('v' + PKG.version)}`);
-  console.log(`  ${dim('One gateway, every AI project, one dashboard.')}`);
+  console.log(`  ${bold(cyan('◆ ' + (brand.name || 'AI Command Center')))} ${dim('v' + PKG.version)}`);
+  console.log(`  ${dim(brand.tagline || 'One gateway, every AI project, one dashboard.')}`);
   console.log('');
   const auth = gateway.auth;
   const authLine = auth.disabled
@@ -446,6 +447,7 @@ ${bold('Options')}
   --host <h>        Bind host (default 127.0.0.1; use 0.0.0.0 to share on LAN)
   --data-dir <dir>  Where telemetry is stored (default ~/.ai-command-center)
   --config <file>   Extra config file (JSON)
+  --preset <name>   Load a built-in config preset (e.g. medikabazaar)
   --project <name>  Project name used in snippets output
   --range <r>       stats range: 1h | 24h | 7d | 30d | 90d | all
   --days <n>        demo: days of history to generate (default 14)

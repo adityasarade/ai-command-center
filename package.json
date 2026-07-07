@@ -3,6 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "description": "AI Command Center — plug-and-play LLM gateway + consolidated usage/cost dashboard for all your AI projects, in any language.",
+  "license": "MIT",
+  "author": "Aditya Sarade",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adityasarade/ai-command-center.git"
+  },
+  "homepage": "https://github.com/adityasarade/ai-command-center#readme",
   "workspaces": [
     "packages/gateway",
     "packages/sdk-js"
@@ -10,6 +17,7 @@
   "scripts": {
     "start": "node packages/gateway/bin/aicc.js start",
     "demo": "node packages/gateway/bin/aicc.js demo",
-    "test": "node --test \"packages/gateway/test/*.test.js\""
+    "test": "node --test \"packages/gateway/test/*.test.js\"",
+    "evals": "node evals/run.js"
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "ai-command-center",
   "version": "0.1.0",
-  "description": "Plug-and-play LLM gateway + consolidated usage & cost dashboard for every AI project you run — any language, one dashboard.",
+  "description": "Plug-and-play LLM gateway + consolidated usage & cost dashboard for every AI project you run — any language, one dashboard, one command.",
   "type": "module",
   "bin": {
     "ai-command-center": "bin/aicc.js",
@@ -12,7 +12,9 @@
     "bin",
     "src",
     "public",
-    "pricing"
+    "pricing",
+    "presets",
+    "README.md"
   ],
   "scripts": {
     "start": "node bin/aicc.js start",
@@ -21,6 +23,16 @@
   "engines": {
     "node": ">=18.17"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adityasarade/ai-command-center.git",
+    "directory": "packages/gateway"
+  },
+  "homepage": "https://github.com/adityasarade/ai-command-center#readme",
+  "bugs": {
+    "url": "https://github.com/adityasarade/ai-command-center/issues"
+  },
+  "author": "Aditya Sarade",
   "keywords": [
     "llm",
     "openai",
@@ -28,10 +40,14 @@
     "gemini",
     "gateway",
     "proxy",
-    "cost-tracking",
+    "llmops",
     "observability",
+    "cost-tracking",
+    "token-usage",
     "dashboard",
-    "ai-ops"
+    "ai-ops",
+    "self-hosted",
+    "openai-compatible"
   ],
   "license": "MIT"
 }

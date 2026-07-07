@@ -99,7 +99,7 @@ export function createGateway(config) {
 
       // ---- auth endpoints ----
       if (pathname.startsWith('/api/auth/')) {
-        return await handleAuthRoutes(req, res, pathname, { auth });
+        return await handleAuthRoutes(req, res, pathname, { auth, config });
       }
 
       // ---- gateway API (session-gated once auth is locked) ----
@@ -121,6 +121,7 @@ export function createGateway(config) {
         if (pathname === '/api/meta') {
           return respondJson(res, 200, {
             name: 'AI Command Center',
+            branding: config.branding,
             version: PKG.version,
             startedAt,
             dataDir: isAdmin ? config.dataDir : null,
@@ -258,7 +259,7 @@ export function createGateway(config) {
 }
 
 // ---------------------------------------------------------------- auth routes
-async function handleAuthRoutes(req, res, pathname, { auth }) {
+async function handleAuthRoutes(req, res, pathname, { auth, config }) {
   if (pathname === '/api/auth/state' && req.method === 'GET') {
     const user = auth.sessionUser(req);
     return respondJson(res, 200, {
@@ -266,6 +267,7 @@ async function handleAuthRoutes(req, res, pathname, { auth }) {
       locked: auth.locked,
       needsSetup: auth.needsSetup,
       user: auth.publicUser(user),
+      branding: config.branding, // public: lets the login screen show company branding
     });
   }
   if (pathname === '/api/auth/setup' && req.method === 'POST') {
