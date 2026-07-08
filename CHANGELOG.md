@@ -1,60 +1,62 @@
 # Changelog
 
 All notable changes to this project are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
-follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
+Nothing yet. Open an issue or PR at
+https://github.com/adityasarade/ai-command-center.
 
-- **Traces / sessions**: group the LLM calls of one request or agent run via an
-  `x-aicc-trace` header; a Traces dashboard view lists sessions and their timelines.
-- **Prompt registry**: track prompt templates and versions via `x-aicc-prompt` /
-  `x-aicc-prompt-version`; a Prompts view compares cost, latency and error rate per version.
-- **Budgets & alerts**: per-project monthly budgets with threshold alerts, plus
-  per-project error-rate / p95-latency alerts and an optional `alertWebhook`.
-- **Anomaly detection**: rule-based cost-spike and error-burst flags per project.
-- **Model comparison** view: effective cost per 1M tokens, p50/p95 latency, error rate.
-- **Dashboard**: multi-view UI (Overview / Traces / Prompts / Models / Alerts) with
-  request-feed pagination.
-- New API endpoints: `/api/traces`, `/api/trace`, `/api/prompts`, `/api/models`,
-  `/api/anomalies`, `/api/alerts`, and admin `/api/admin/budget`.
-- ESLint + Prettier with a CI lint job; a marketing + docs website under `site/`.
+## [0.1.0] - 2026-07-08
 
-### Changed
-
-- Auth: password hashing is now async (non-blocking); gateway keys compared in
-  constant time; session cookie gets `Secure` behind TLS.
-
-## [0.1.0] - 2026-07
-
-First public release.
+First public release, on npm as
+[`ai-command-center`](https://www.npmjs.com/package/ai-command-center).
 
 ### Added
 
 - **LLM gateway**: transparent HTTP proxy for OpenAI, Anthropic, Gemini,
   OpenRouter, Mistral, DeepSeek, xAI, Groq, Together, Ollama, and any
-  OpenAI-compatible endpoint. Streaming and non-streaming; usage parsed on the
+  OpenAI-compatible endpoint. Streaming and non-streaming; usage is parsed on the
   side without altering the response.
-- **Usage & cost capture**: tokens (incl. cache read/write), latency, TTFB,
+- **Usage & cost capture**: tokens (including cache read/write), latency, TTFB,
   errors, and computed USD cost per request, grouped by project.
-- **Dashboard**: self-hosted single page - spend/requests/tokens/latency tiles,
-  spend-over-time stacked by project, by-project and by-model breakdowns,
-  provider split, live request feed (SSE), search and filters.
-- **Currency**: INR-first display with a ₹/$/€ toggle and live daily FX
-  (ECB via frankfurter.app, with fallback); data stored in USD.
+- **Dashboard**: self-hosted multi-view UI - Overview (spend/requests/tokens/latency
+  tiles, spend-over-time stacked by project, by-project and by-model breakdowns,
+  provider split, live SSE request feed with search, filters, and pagination),
+  plus Traces, Prompts, Models, and Alerts views.
+- **Traces / sessions**: group the LLM calls of one request or agent run via an
+  `x-aicc-trace` header; the Traces view lists sessions and their call timelines.
+- **Prompt registry**: track prompt templates and versions via `x-aicc-prompt` /
+  `x-aicc-prompt-version`; the Prompts view compares cost, latency, and error rate
+  per version.
+- **Budgets & alerts**: per-project monthly budgets with threshold alerts, plus
+  per-project error-rate and p95-latency alerts and an optional `alertWebhook`.
+- **Anomaly detection**: rule-based cost-spike and error-burst flags per project.
+- **Model comparison**: effective cost per 1M tokens, p50/p95 latency, and error
+  rate, side by side.
+- **Currency**: INR-first display with a rupee/dollar/euro toggle and live daily
+  FX (ECB via frankfurter.app, with fallback); data is stored in USD.
 - **Auth & access control**: optional (on by default) - first-run admin setup,
-  session login, teams, per-project gateway keys, team-scoped project visibility.
+  session login, teams, per-project gateway keys, and team-scoped project
+  visibility.
 - **CLI**: `start`, `demo`, `clear`, `stats`, `snippets`, `user`.
 - **Thin SDKs**: optional Python (`aicc`) and JS (`@ai-command-center/sdk`)
-  helpers that only set base-URL env vars.
-- **Config presets**: OSS default plus an example company preset (branding +
-  currency), so the same codebase serves a private company build.
-- **Evals**: reproducible proxy-overhead and cost-accuracy benchmarks.
+  helpers that only set base-URL environment variables.
+- **Config presets**: OSS default plus an example company preset (branding and
+  currency), so the same codebase can serve a private company build.
+- **HTTP API**: `/api/track`, `/api/traces`, `/api/trace`, `/api/prompts`,
+  `/api/models`, `/api/anomalies`, `/api/alerts`, and admin `/api/admin/budget`.
+- **Evals**: reproducible proxy-overhead and cost-accuracy benchmarks
+  (`npm run evals`).
+- **Project hygiene**: ESLint + Prettier with a CI lint job, a marketing and docs
+  website under `site/`, and 61 tests.
 
 ### Security
 
-- Cross-origin protection on the proxy and all state-changing endpoints;
-  central keys are never injected for untrusted cross-origin requests.
-- No prompt/response bodies are ever stored - metadata only.
+- Cross-origin protection on the proxy and every state-changing endpoint; central
+  keys are never injected for untrusted cross-origin requests.
+- Password hashing is async (non-blocking); gateway keys are compared in constant
+  time; the session cookie is marked `Secure` behind TLS.
+- No prompt or response bodies are ever stored - metadata only.

@@ -4,15 +4,15 @@
 
 **One gateway, every AI project, one dashboard.**
 
-A dependency-free LLM gateway and self-hosted usage & cost dashboard. Point any
-project at it - any language, one command - and watch tokens, cost, latency, and
-errors for every AI product land in one place.
+A zero-dependency LLM gateway with a self-hosted usage and cost dashboard.
+Point any project at it - any language, one command - and every token,
+rupee, and millisecond lands in one place.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-3987e5.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.17-3fb950.svg)](package.json)
 [![runtime deps](https://img.shields.io/badge/runtime%20deps-0-21c17a.svg)](packages/gateway/package.json)
 [![npm](https://img.shields.io/npm/v/ai-command-center?color=cb3837&label=npm)](https://www.npmjs.com/package/ai-command-center)
-[![tests](https://img.shields.io/badge/tests-52%20passing-3fb950.svg)](packages/gateway/test)
+[![tests](https://img.shields.io/badge/tests-61%20passing-3fb950.svg)](packages/gateway/test)
 
 <br/>
 
@@ -23,51 +23,51 @@ errors for every AI product land in one place.
 ---
 
 ```bash
-npx ai-command-center        # gateway + dashboard at http://localhost:4321
-npx ai-command-center demo   # seed 14 days of realistic sample data to explore
+npx ai-command-center        # gateway + dashboard on http://localhost:4321
+npx ai-command-center demo   # seed 14 days of sample data to explore first
 ```
 
-Then point any project at it - the only change is a base URL, and your API key
-never moves:
+Then point a project at it. The only change is the base URL, and your API key
+rides along untouched:
 
 ```python
 from openai import OpenAI
 client = OpenAI(base_url="http://localhost:4321/p/invoice-bot/openai/v1")
 ```
 
-That's the whole integration. **Full docs & a live interactive demo:
-[aicommandcenter.vercel.app](https://aicommandcenter.vercel.app)**
+That is the whole integration - nothing else in your code moves. Full docs and a
+live interactive demo: **[aicommandcenter.vercel.app](https://aicommandcenter.vercel.app)**
 
-It began as the working implementation of an internal "AI Box" platform concept -
-its SDK + LLM Gateway + cost-visibility slice, built to actually run - and is now
-open-sourced so anyone can get a usage/cost dashboard for their AI projects with
-no hassle.
+> This started as the working core of an internal "AI Box" platform idea - the
+> gateway and cost-visibility slice, built to actually run rather than sit in a
+> deck. It is open-sourced so anyone can see what their AI projects cost without
+> standing up a stack for it.
 
 ## How it works
 
 <div align="center">
-<img src="assets/flow.svg" alt="Your apps (any language) change one base URL to call the gateway; it forwards the request untouched to the provider, streams the response back, and logs token/cost/latency metadata only; the dashboard shows spend per project in ₹/$/€." width="900" />
+<img src="assets/flow.svg" alt="Your apps (any language) change one base URL to call the gateway; it forwards the request untouched to the provider, streams the response back, and logs token/cost/latency metadata only; the dashboard shows spend per project in rupees, dollars, or euros." width="900" />
 </div>
 
-Your app calls the LLM exactly as before, but through the gateway. It forwards the
-request untouched (your API key included), streams the response straight back, and
-reads token usage on the side to compute cost. Added latency: well under a
-millisecond.
+Your calls go through the gateway instead of straight to the provider. It
+forwards each request untouched (API key included), streams the response right
+back, and reads the token usage on the way past to price it. The added latency
+is under a millisecond, so nothing in your app slows down.
 
-## Why
+## What you get
 
-Most teams either fly blind on LLM spend or stand up a multi-service
-observability stack (Postgres + ClickHouse + Redis + object storage). This is the
-middle path: the numbers you actually need, from one command, on your own
-machine, with **zero runtime dependencies**.
+Most teams end up at one of two extremes: flying blind on LLM spend, or running a
+multi-service observability stack (Postgres, ClickHouse, Redis, object storage)
+to answer a fairly simple question. This is the middle path - the numbers you
+actually need, from one command, on your own machine, with nothing to operate.
 
-- **One line to onboard** - change a base URL (or one env var). No new library, no per-language SDK, no OpenTelemetry setup.
-- **Any language** - it's an HTTP gateway. Python, JS, Java, Go, Rust, shell - identical.
-- **Every provider** - OpenAI, Anthropic, Gemini, OpenRouter, Mistral, DeepSeek, xAI, Groq, Together, Ollama, and any OpenAI-compatible endpoint.
-- **Cost you can trust** - exact per-request USD from real token counts (incl. cached tokens), shown in ₹ / $ / € with live rates.
-- **More than a meter** - five dashboard views: cost/usage, **traces/sessions**, **prompt versions**, **model comparison**, and **budgets + anomaly alerts**.
-- **Your keys, your data** - provider keys pass straight through; **prompt and response bodies are never stored** (metadata only); telemetry stays on your machine.
-- **Team-ready** - optional login, teams, and per-project gateway keys, so members see only their team's projects.
+- Onboard a project in one line - a base URL, or a single environment variable. No new library, no per-language SDK, no OpenTelemetry wiring.
+- It is just an HTTP gateway, so every language works the same way: Python, JS, Java, Go, Rust, shell.
+- Every major provider is covered: OpenAI, Anthropic, Gemini, OpenRouter, Mistral, DeepSeek, xAI, Groq, Together, Ollama, and any OpenAI-compatible endpoint.
+- Cost is exact, not estimated: per-request USD from real token counts (cached tokens included), shown in rupees, dollars, or euros at live rates.
+- Five dashboard views, not just a spend meter: cost and usage, traces and sessions, prompt versions, model comparison, and budgets with anomaly alerts.
+- Your keys and data stay put: provider keys pass straight through, prompt and response bodies are never stored (metadata only), and telemetry never leaves your machine.
+- Team-ready when you need it: optional login, teams, and per-project gateway keys, so people see only their own team's projects.
 
 Traces and prompt metrics come from two optional headers (`x-aicc-trace`,
 `x-aicc-prompt`); budgets and anomaly alerts are computed for you. See
@@ -75,10 +75,10 @@ Traces and prompt metrics come from two optional headers (`x-aicc-trace`,
 
 ## Integrate (any language)
 
-The gateway is a transparent proxy. Every SDK supports a custom base URL, so
-integration is one line - or zero, via environment variables. The
-`/p/<project>` path segment (or an `x-aicc-project` header) groups calls on the
-dashboard.
+The gateway is a transparent proxy, and every SDK already supports a custom base
+URL - so integration is one line, or zero via an environment variable. The
+`/p/<project>` path segment (or an `x-aicc-project` header) is how calls get
+grouped on the dashboard.
 
 <table>
 <tr><td>
@@ -112,10 +112,13 @@ export OPENAI_BASE_URL=\
 </td></tr>
 </table>
 
-Print snippets for your own project: `npx ai-command-center snippets --project my-app`.
-Full per-language guide (LangChain, Spring AI, curl, …): **[docs/integrate](https://aicommandcenter.vercel.app/docs/integrate)**.
+Print the exact snippets for your own project with
+`npx ai-command-center snippets --project my-app`. Full per-language guide
+(LangChain, Spring AI, curl, and more):
+**[docs/integrate](https://aicommandcenter.vercel.app/docs/integrate)**.
 
-**Batch jobs / unsupported providers** - report usage directly and it's priced the same way:
+Can't route through the proxy (a batch job, an unsupported provider)? Report
+usage directly and it is priced and shown the same way:
 
 ```bash
 curl -X POST http://localhost:4321/api/track -H "Content-Type: application/json" \
@@ -125,19 +128,18 @@ curl -X POST http://localhost:4321/api/track -H "Content-Type: application/json"
 ## How it compares
 
 AI Command Center is a self-hosted, language-agnostic command center that runs
-from one command with no database: cost/usage, session traces, prompt-version
-metrics, model comparison, budgets and anomaly alerts. It stays lightweight **by
-design** - it is not a distributed span-tree tracer, an LLM-as-judge eval
-framework, a prompt playground, or a routing/failover gateway. Platforms like
-Langfuse, Helicone, LangSmith, LiteLLM, and Portkey go further on those axes (and
-are also a database, a queue, and an analytics cluster to run). If you need them,
-use them.
+from one command with no database: cost and usage, session traces, prompt-version
+metrics, model comparison, budgets, and anomaly alerts. It stays lightweight on
+purpose. It is not a distributed span-tree tracer, an LLM-as-judge eval
+framework, a prompt playground, or a routing and failover gateway - Langfuse,
+Helicone, LangSmith, LiteLLM, and Portkey go further on those axes, and are also a
+database, a queue, and an analytics cluster to run. If you need that depth, use
+them.
 
 Reach for this when the question is _"what is each project spending, across many
 providers and languages, and is anything off?"_ - answered without shipping
-prompt content anywhere or standing up infrastructure.
-
-Full, fact-checked comparison: **[docs/comparison](https://aicommandcenter.vercel.app/docs/comparison)**.
+prompt content anywhere or standing up infrastructure. Full, fact-checked
+comparison: **[docs/comparison](https://aicommandcenter.vercel.app/docs/comparison)**.
 
 ## CLI
 
@@ -150,40 +152,42 @@ npx ai-command-center snippets   # integration code for every language
 npx ai-command-center user add   # manage accounts (first user = admin)
 ```
 
-Flags: `--port` · `--host 0.0.0.0` (share on LAN) · `--data-dir` · `--config` ·
+Flags: `--port` · `--host 0.0.0.0` (share on a LAN) · `--data-dir` · `--config` ·
 `--preset <name>` · `--no-auth`.
 
 ## Configuration, auth, security
 
-All optional - the defaults are sensible. See the docs for the full reference:
+Everything is optional and the defaults are sensible. The full reference lives in
+the docs:
 
 - **[Configuration](https://aicommandcenter.vercel.app/docs/config)** - layered config, presets, currency, custom providers, pricing overrides.
-- **[Auth & teams](https://aicommandcenter.vercel.app/docs/auth)** - open until you create the first admin, then login + per-project gateway keys + team-scoped visibility.
-- **[Security](https://aicommandcenter.vercel.app/docs/security)** - keys pass through and are never logged; no message bodies stored; cross-origin protection so a random web page can't spend your keys or wipe telemetry.
+- **[Auth & teams](https://aicommandcenter.vercel.app/docs/auth)** - open until you create the first admin, then login plus per-project gateway keys and team-scoped visibility.
+- **[Security](https://aicommandcenter.vercel.app/docs/security)** - keys pass through and are never logged, no message bodies are stored, and cross-origin protection keeps a random web page from spending your keys or wiping telemetry.
 
-## Measured, not claimed
+## Benchmarks
 
-The eval suite ([`evals/`](evals/), `npm run evals`, mock upstream - no keys, no network):
+Reproducible with `npm run evals` against an in-process mock upstream (no keys, no
+network), so anyone can rerun them:
 
-| Metric                       | Result                                                     |
-| ---------------------------- | ---------------------------------------------------------- |
-| Added proxy latency (p50)    | **< 1 ms** (negligible vs 300 ms-30 s LLM calls)           |
-| Cost accuracy                | **0 mismatches** across 20 provider/model/token cases      |
-| Usage-parser coverage        | **100%** of provider response shapes (stream + non-stream) |
-| Gateway runtime dependencies | **0**                                                      |
+| Metric                    | Result                                                     |
+| ------------------------- | ---------------------------------------------------------- |
+| Added proxy latency (p50) | **0.21 ms** (negligible against 300 ms-30 s LLM calls)     |
+| Cost accuracy             | **0 mismatches** across 20 provider/model/token cases      |
+| Usage-parser coverage     | **100%** of provider response shapes (stream + non-stream) |
+| Runtime dependencies      | **0**                                                      |
 
-Latest report: [`evals/REPORT.md`](evals/REPORT.md).
+Latest full report: [`evals/REPORT.md`](evals/REPORT.md).
 
 ## Company vs open-source build
 
-Same MIT codebase. The company build is just a **config preset** (branding,
-defaults) loaded with `--preset` - no feature difference:
+Same MIT codebase. A company build is just a **config preset** (branding,
+defaults) loaded with `--preset` - there is no feature difference:
 
 ```bash
 npx ai-command-center start --preset example
 ```
 
-Add your own under `packages/gateway/presets/<name>.json`.
+Drop your own under `packages/gateway/presets/<name>.json`.
 
 ## Repo layout
 
@@ -200,21 +204,21 @@ docs/                comparison, demo script
 ## Development
 
 ```bash
-npm test          # 52 tests - mock upstream providers, no API keys needed
+npm test          # 61 tests - mock upstream providers, no API keys needed
 npm run evals     # overhead + cost-accuracy report
 npm start         # run the gateway from source
 cd site && npm run dev   # the website
 ```
 
-Contributions welcome - see [CONTRIBUTING.md](CONTRIBUTING.md) and
-[AGENTS.md](AGENTS.md). Security reports: [SECURITY.md](SECURITY.md).
+Contributions are welcome - start with [CONTRIBUTING.md](CONTRIBUTING.md) and
+[AGENTS.md](AGENTS.md). Security reports go to [SECURITY.md](SECURITY.md).
 
 ## Current limitations (honest)
 
-- Pricing ships as sane defaults but **will drift** - verify against provider price pages and override in config (unpriced models are flagged, never guessed).
-- JSONL + in-memory aggregation is comfortable into the hundreds of thousands of records; beyond that the storage layer is small and swappable (SQLite/Postgres).
-- Auth is username/password + signed cookies (no SSO yet) and telemetry isn't encrypted at rest - fine for an internal tool; review before external multi-tenant use.
-- OpenAI Realtime/WebSocket APIs aren't proxied (HTTP only).
+- Pricing ships as sane defaults but **will drift** - verify against provider price pages and override in config. Unpriced models are flagged, never guessed.
+- JSONL plus in-memory aggregation is comfortable into the hundreds of thousands of records. Beyond that the storage layer is small and swappable (SQLite or Postgres).
+- Auth is username/password plus signed cookies (no SSO yet), and telemetry isn't encrypted at rest - fine for an internal tool, but review before external multi-tenant use.
+- OpenAI Realtime and other WebSocket APIs aren't proxied (HTTP only).
 
 ## License
 
