@@ -340,7 +340,8 @@ export default function Home() {
           <div className="sec-head">
             <span className="mono-label">02 / Capabilities</span>
             <h2>
-              More than a cost meter. <em>A control room.</em>
+              More than a cost meter. <br />
+              <em>A control room.</em>
             </h2>
             <p>
               Every capability runs from the same one-command install, with metadata-only storage
