@@ -21,7 +21,21 @@
 - **Tagged with GitHub Releases**:
   - [`v0.1.0`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.1.0) - first public release.
   - [`v0.1.1`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.1.1) - dashboard search & pagination.
-- **Verified**: 61 tests pass on Node 18/20/22, CI is green, evals pass.
+- **Verified**: 73 tests pass on Node 18/20/22, CI is green, evals pass.
+
+## ⏳ Ready to publish: 0.2.0
+
+`packages/gateway` is bumped to `0.2.0` - provider routing (failover +
+load-balancing), offline quality evals, and a read-only viewer role with
+per-project grants. Committed, CI-green, and verified live in the dashboard
+(routing `via` tag, an eval run scored 4.00/5). The npm upload needs your OTP:
+
+```bash
+cd packages/gateway
+npm publish --access public       # publishes ai-command-center@0.2.0, asks for OTP
+cd ../.. && git tag v0.2.0 && git push origin v0.2.0
+gh release create v0.2.0 --notes-file <notes>   # optional, from the CHANGELOG entry
+```
 
 ## Cutting the next version
 
