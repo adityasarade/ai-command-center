@@ -17,24 +17,32 @@
 - **Verified**: 61 tests pass, evals pass, the published tarball includes LICENSE
   and README (26 files, ~130 kB).
 
-## Optional follow-ups
+- **Tagged**: `v0.1.0` is pushed, with a GitHub Release:
+  https://github.com/adityasarade/ai-command-center/releases/tag/v0.1.0
 
-### Tag the release
+## Optional follow-ups: publish the thin SDKs
+
+The gateway does not need these - they only set base-URL env vars - but
+publishing them makes `aicc.init()` / `import { init }` installable. Both are
+build-verified; the upload step needs your account (and a 2FA OTP), so it is
+yours to run.
+
+**JS - `@ai-command-center/sdk`** (scoped, so the npm org must exist first):
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
-# then draft a GitHub Release from the tag using the CHANGELOG entry
+# one-time: create a free org named "ai-command-center" at
+# https://www.npmjs.com/org/create  (public packages are free)
+cd packages/sdk-js
+npm publish --access public       # asks for your OTP
 ```
 
-### Publish the thin SDKs
+**Python - `aicc-sdk`** (this repo uses uv; there is no pip on PATH):
 
-The gateway does not need these - they only set base-URL env vars.
-
-- **JS**: `cd packages/sdk-js && npm publish --access public`. The name is scoped
-  (`@ai-command-center/sdk`), so create the npm org/scope first or rename to
-  unscoped.
-- **Python**: `cd packages/sdk-python && python -m build && twine upload dist/*`
-  (name `aicc-sdk`).
+```bash
+cd packages/sdk-python
+uv build                          # already verified: builds sdist + wheel, twine check passes
+uvx twine upload dist/*           # needs a PyPI account + API token
+```
 
 ## Cutting the next version
 
