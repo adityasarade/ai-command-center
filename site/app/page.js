@@ -111,63 +111,59 @@ export default function Home() {
     <>
       <div className="hero-wrap">
         <div className="wrap hero">
-          <div>
-            <span className="eyebrow">
-              <span className="dot" /> open source · self-hosted · zero dependencies
+          <span className="eyebrow">
+            <span className="dot" /> open source · self-hosted · zero dependencies
+          </span>
+          <h1 className="display">
+            The command center for <em>every AI project</em> you run.
+          </h1>
+          <p className="lede">
+            A dependency-free LLM gateway and self-hosted dashboard. Point any project at it - any
+            language, one command - and get cost, traces, prompt versions, budgets and anomaly
+            alerts across your whole AI portfolio. No SDK to adopt, no database to run.
+          </p>
+          <div className="hero-actions">
+            <Link href="/docs" className="btn btn-primary">
+              Get started
+            </Link>
+            <span className="term">
+              <span className="prompt">$</span> npx ai-command-center <span className="cursor" />
             </span>
-            <h1>
-              The command center for <span className="grad">every AI project you run.</span>
-            </h1>
-            <p className="lede">
-              A dependency-free LLM gateway and self-hosted dashboard. Point any project at it - any
-              language, one command - and get cost, traces, prompt versions, budgets and anomaly
-              alerts across your whole AI portfolio. No SDK to adopt, no database to run.
-            </p>
-            <div className="hero-actions">
-              <Link href="/docs" className="btn btn-primary">
-                Get started
-              </Link>
-              <span className="term">
-                <span className="prompt">$</span> npx ai-command-center <span className="cursor" />
-              </span>
-            </div>
-            <div className="hero-meta">
-              <span>
-                <b>&lt;1ms</b> proxy overhead
-              </span>
-              <span>
-                <b>0</b> runtime deps
-              </span>
-              <span>
-                <b>11+</b> providers
-              </span>
-              <span>
-                <b>MIT</b> licensed
-              </span>
-            </div>
           </div>
-          <div>
-            <DemoDashboard />
-            <p
-              style={{
-                marginTop: 12,
-                textAlign: 'center',
-                fontFamily: 'var(--font-mono), monospace',
-                fontSize: 12.5,
-                color: 'var(--muted)',
-              }}
-            >
-              live sample - toggle currency &amp; range
-            </p>
+          <div className="hero-meta">
+            <span>
+              <b>&lt;1ms</b> proxy overhead
+            </span>
+            <span>
+              <b>0</b> runtime deps
+            </span>
+            <span>
+              <b>11+</b> providers
+            </span>
+            <span>
+              <b>MIT</b> licensed
+            </span>
           </div>
         </div>
       </div>
+
+      <section className="showcase">
+        <div className="wrap">
+          <div className="cap">
+            <span className="mono-label">The dashboard</span>
+            <p>live sample - toggle currency &amp; range</p>
+          </div>
+          <DemoDashboard />
+        </div>
+      </section>
 
       <section className="sec">
         <div className="wrap">
           <div className="sec-head">
             <span className="mono-label">01 / Integration</span>
-            <h2>Change one base URL. Keep your keys. Ship.</h2>
+            <h2>
+              Change one base URL. <em>Keep your keys.</em> Ship.
+            </h2>
             <p>
               Every provider SDK already supports a custom base URL, so onboarding a project is one
               line - or zero, via an environment variable. Nothing else about your code changes, and
@@ -206,7 +202,9 @@ export default function Home() {
         <div className="wrap">
           <div className="sec-head">
             <span className="mono-label">02 / Capabilities</span>
-            <h2>More than a cost meter. A control room.</h2>
+            <h2>
+              More than a cost meter. <em>A control room.</em>
+            </h2>
             <p>
               Every capability runs from the same one-command install, with metadata-only storage
               and no external services.
@@ -261,7 +259,9 @@ export default function Home() {
         <div className="wrap">
           <div className="sec-head">
             <span className="mono-label">03 / Positioning</span>
-            <h2>Lightweight on purpose.</h2>
+            <h2>
+              Lightweight <em>on purpose.</em>
+            </h2>
             <p>
               Platforms like Langfuse, Helicone and LangSmith go deeper on tracing and evaluation;
               LiteLLM and Portkey are richer gateways. They are also a database, a queue and an
@@ -283,7 +283,9 @@ export default function Home() {
         <div className="wrap">
           <div className="sec-head">
             <span className="mono-label">04 / Roadmap</span>
-            <h2>Shipped, and what&apos;s next.</h2>
+            <h2>
+              Shipped, and <em>what&apos;s next.</em>
+            </h2>
             <p>Clear about what exists today and what is deliberately not built yet.</p>
           </div>
           <div className="roadmap">
@@ -298,15 +300,15 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="sec">
+      <section className="sec cta-sec">
         <div className="wrap" style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'clamp(28px,4vw,42px)' }}>
-            Give every AI project a command center.
+          <h2 className="display" style={{ fontSize: 'clamp(30px,5vw,52px)', lineHeight: 1.05 }}>
+            Give every AI project a <em>command center.</em>
           </h2>
           <p
             style={{
               color: 'var(--ink-2)',
-              margin: '14px auto 28px',
+              margin: '18px auto 30px',
               maxWidth: '52ch',
               fontSize: 17,
             }}

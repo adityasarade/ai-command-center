@@ -1,25 +1,29 @@
-/* AI Command Center - engineering control-room aesthetic.
-   Dark-committed by intent: the product is a dark dashboard, so the site
-   commits to one confident, technical look rather than a generic theme flip. */
+/* AI Command Center - a quiet, editorial engineering aesthetic.
+   Near-black canvas, one muted teal signal, an editorial serif for the big
+   type and monospace for the technical detail. Dark-committed by intent:
+   the product is a dark dashboard, so the site holds one confident look. */
 
 :root {
-  --bg: #0a0b0e;
-  --bg-2: #0e1014;
-  --surface: #14161c;
-  --surface-2: #1a1d25;
-  --ink: #eef1f6;
-  --ink-2: #a7adba;
-  --muted: #6a707d;
+  --bg: #0a0a0c;
+  --bg-2: #0d0e10;
+  --surface: #121316;
+  --surface-2: #181a1e;
+  --ink: #edece8;
+  --ink-2: #a4a5a2;
+  --muted: #6a6c70;
   --line: rgba(255, 255, 255, 0.07);
-  --line-2: rgba(255, 255, 255, 0.12);
-  --accent: #5b9dff;
-  --accent-soft: rgba(91, 157, 255, 0.14);
-  --accent-2: #2fd08a;
-  --accent-warm: #f0b03a;
-  --danger: #f0616d;
-  --radius: 14px;
-  --maxw: 1160px;
-  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.4), 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+  --line-2: rgba(255, 255, 255, 0.13);
+  /* single muted signal - a desaturated teal that sits between the product's
+     blue and green chart colors, so the site and the dashboard read as one. */
+  --accent: #63bfa2;
+  --accent-quiet: #4f9d84;
+  --accent-soft: rgba(99, 191, 162, 0.12);
+  --accent-2: #63bfa2;
+  --accent-warm: #c5a86a;
+  --danger: #e0616a;
+  --radius: 13px;
+  --maxw: 1140px;
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.45), 0 30px 70px -24px rgba(0, 0, 0, 0.78);
   color-scheme: dark;
 }
 
@@ -34,6 +38,7 @@ html {
 }
 
 body {
+  position: relative;
   min-height: 100vh;
   color: var(--ink-2);
   font-family: var(--font-sans), system-ui, sans-serif;
@@ -41,17 +46,28 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* The "slight background": a faint blueprint dot-grid + a soft signal glow up
-     top. Fixed so it reads as a surface the content sits on, not scrolling noise. */
+  /* The "slight background": a deep vertical wash plus one soft teal halo behind
+     the hero. No grid - just atmosphere the content sits on. */
   background-color: var(--bg);
   background-image:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    radial-gradient(720px 420px at 50% -80px, rgba(91, 157, 255, 0.1), transparent 70%);
-  background-size:
-    22px 22px,
-    100% 100%;
+    radial-gradient(900px 520px at 50% -140px, rgba(99, 191, 162, 0.07), transparent 72%),
+    linear-gradient(180deg, #0c0d0f 0%, var(--bg) 46%);
   background-attachment: fixed;
-  background-repeat: repeat, no-repeat;
+  background-repeat: no-repeat;
+}
+/* Fine film grain over everything - tactile, print-like, very low contrast. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 a {
@@ -76,6 +92,19 @@ code,
 pre,
 .mono {
   font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* Editorial display serif - the site's one expressive move. Reserved for the
+   big typographic beats (hero, section titles, CTA); never for body or docs. */
+.display {
+  font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+.display em {
+  font-style: italic;
+  color: var(--ink);
 }
 
 .wrap {
@@ -136,13 +165,16 @@ pre,
 }
 .nav-links {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   margin-left: auto;
   align-items: center;
 }
 .nav-links a {
   color: var(--ink-2);
-  font-size: 14px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
   padding: 7px 12px;
   border-radius: 8px;
 }
@@ -154,9 +186,7 @@ pre,
 .nav-cta {
   border: 1px solid var(--line-2);
   color: var(--ink) !important;
-  font-family: var(--font-mono), monospace;
-  font-size: 13px;
-  margin-left: 6px;
+  margin-left: 8px;
 }
 .nav-cta:hover {
   border-color: var(--accent);
@@ -174,77 +204,100 @@ pre,
   border-bottom: 1px solid var(--line);
 }
 .hero {
-  padding: 96px 0 52px;
-  display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 48px;
-  align-items: center;
+  padding: clamp(72px, 13vh, 140px) 0 clamp(56px, 9vh, 96px);
+  max-width: 940px;
 }
-@media (max-width: 940px) {
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 30px;
-    padding: 64px 0 36px;
+/* Each hero element rises in on load, gently staggered. */
+.hero > * {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.hero > *:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.hero > *:nth-child(2) {
+  animation-delay: 0.09s;
+}
+.hero > *:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.hero > *:nth-child(4) {
+  animation-delay: 0.23s;
+}
+.hero > *:nth-child(5) {
+  animation-delay: 0.3s;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
   }
 }
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   font-family: var(--font-mono), monospace;
   font-size: 12px;
-  letter-spacing: 0.03em;
-  color: var(--ink-2);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 6px 14px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .eyebrow .dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--accent-2);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 20%, transparent);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 .hero h1 {
-  font-size: clamp(38px, 5.4vw, 60px);
-  margin: 22px 0 0;
-  letter-spacing: -0.03em;
-  line-height: 1.02;
+  font-size: clamp(44px, 7.4vw, 86px);
+  margin: 26px 0 0;
+  letter-spacing: -0.015em;
+  line-height: 0.98;
+  max-width: 15ch;
 }
+.hero h1 em,
 .hero h1 .grad {
-  background: linear-gradient(96deg, var(--accent), #8fc0ff 60%, var(--accent-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-style: italic;
+  color: var(--accent);
+  background: none;
+  -webkit-background-clip: border-box;
 }
 .hero p.lede {
-  font-size: clamp(16px, 1.4vw, 18.5px);
+  font-size: clamp(16.5px, 1.5vw, 19px);
   color: var(--ink-2);
-  margin-top: 22px;
-  max-width: 54ch;
+  margin-top: 26px;
+  max-width: 56ch;
   line-height: 1.62;
 }
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 30px;
+  gap: 14px;
+  margin-top: 34px;
   align-items: center;
 }
 .hero-meta {
-  margin-top: 26px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
   display: flex;
-  gap: 22px;
+  gap: 34px;
   flex-wrap: wrap;
   font-family: var(--font-mono), monospace;
   font-size: 12.5px;
+  letter-spacing: 0.02em;
   color: var(--muted);
+}
+.hero-meta span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .hero-meta b {
   color: var(--ink);
   font-weight: 600;
+  font-size: 17px;
 }
 
 .btn {
@@ -358,22 +411,51 @@ pre,
 
 /* ---------------------------------------------------------------- sections */
 .sec {
-  padding: 76px 0;
+  padding: clamp(64px, 9vh, 104px) 0;
   border-top: 1px solid var(--line);
 }
 .sec-head {
-  max-width: 62ch;
-  margin-bottom: 40px;
+  max-width: 60ch;
+  margin-bottom: 44px;
 }
 .sec-head h2 {
-  font-size: clamp(26px, 3.6vw, 37px);
-  margin-top: 14px;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(29px, 4.2vw, 46px);
+  letter-spacing: -0.01em;
+  line-height: 1.04;
+  margin-top: 18px;
+}
+.sec-head h2 em {
+  font-style: italic;
+  color: var(--accent);
 }
 .sec-head p {
-  margin-top: 14px;
+  margin-top: 18px;
   color: var(--ink-2);
   font-size: 17px;
-  line-height: 1.6;
+  line-height: 1.62;
+  max-width: 58ch;
+}
+
+/* product showcase - the framed dashboard gets its own quiet stage */
+.showcase {
+  padding: clamp(28px, 5vh, 56px) 0 clamp(56px, 9vh, 96px);
+  border-top: 1px solid var(--line);
+}
+.showcase .cap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.showcase .cap p {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
 }
 
 .grid-2 {
@@ -939,7 +1021,7 @@ footer.foot {
 }
 .demo-seg button.on {
   background: var(--accent-soft);
-  color: #cfe0ff;
+  color: var(--accent);
 }
 .demo-body {
   padding: 16px;
@@ -975,7 +1057,7 @@ footer.foot {
   font-weight: 600;
 }
 .demo-tile.hero .v {
-  color: #7fb0ff;
+  color: var(--accent);
 }
 .demo-cols {
   display: grid;

@@ -3,7 +3,9 @@ import { useState } from 'react';
 
 // Seeded, static sample data - same shape and proportions the real `aicc demo`
 // produces. This is a faithful, click-around preview; no backend involved.
-const COLORS = ['#4c8dff', '#21c17a', '#e0a52a', '#3fb950', '#a78bfa'];
+// Muted, harmonious series palette - teal leads (matches the site accent),
+// the rest are desaturated so the framed preview stays quiet, not neon.
+const COLORS = ['#63bfa2', '#c5a86a', '#6f9bd1', '#9a8fd0', '#7fbf8f'];
 const RATES = { INR: 95.4, USD: 1, EUR: 0.88 };
 const SYM = { INR: '₹', USD: '$', EUR: '€' };
 
