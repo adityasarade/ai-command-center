@@ -18,7 +18,7 @@
   "scripts": {
     "start": "node packages/gateway/bin/aicc.js start",
     "demo": "node packages/gateway/bin/aicc.js demo",
-    "test": "node --test \"packages/gateway/test/*.test.js\"",
+    "test": "node --test packages/gateway/test/*.test.js",
     "evals": "node evals/run.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
