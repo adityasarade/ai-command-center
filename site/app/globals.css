@@ -247,47 +247,18 @@ pre,
   overflow: clip;
   pointer-events: none;
 }
-.deco-cluster {
+/* Secondary astrolabe dials drifting through the page, bleeding off the
+   edges and slowly turning - same instrument motif as the hero, kept faint. */
+.deco-dial {
   position: absolute;
   color: var(--accent);
+  opacity: 0.3;
 }
-.deco-cluster.drift {
-  animation: drift 24s ease-in-out infinite alternate;
+.deco-dial.spin-a {
+  animation: aspin 165s linear infinite;
 }
-.deco-cluster.drift-b {
-  animation: drift 32s ease-in-out infinite alternate-reverse;
-}
-@keyframes drift {
-  to {
-    transform: translateY(-16px);
-  }
-}
-.deco-cluster .ln {
-  stroke: currentColor;
-  stroke-width: 1;
-  opacity: 0.22;
-}
-.deco-cluster .s {
-  fill: #d7dbd8;
-}
-.deco-cluster .s.a {
-  fill: var(--accent);
-}
-.deco-cluster .tw {
-  animation: tw 4.5s ease-in-out infinite;
-}
-.deco-cluster .tw-b {
-  animation: tw 6s ease-in-out infinite;
-  animation-delay: -2.5s;
-}
-@keyframes tw {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
+.deco-dial.spin-b {
+  animation: aspin 120s linear infinite reverse;
 }
 /* Each hero element rises in on load, gently staggered. */
 .hero > * {
@@ -732,6 +703,22 @@ pre,
 .road-item .rd {
   color: var(--ink-2);
   font-size: 14.5px;
+}
+
+/* integration footnote - the remaining ways in, kept compact */
+.int-more {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+.int-more code {
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 12.5px;
 }
 
 /* callout used on landing */

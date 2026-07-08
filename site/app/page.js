@@ -39,6 +39,26 @@ export OPENAI_BASE_URL="http://localhost:4321/p/my-app/openai/v1"
 export ANTHROPIC_BASE_URL="http://localhost:4321/p/my-app/anthropic"`,
   },
   {
+    label: 'Python SDK',
+    lang: 'python',
+    code: `# pip install aicc-sdk
+import aicc
+aicc.init(project="invoice-bot")   # sets the base URLs for you
+
+from openai import OpenAI
+client = OpenAI()                  # your code, unchanged - now tracked`,
+  },
+  {
+    label: 'JS SDK',
+    lang: 'js',
+    code: `// npm install @ai-command-center/sdk
+import { init } from "@ai-command-center/sdk";
+init({ project: "support-bot" });  // before constructing any client
+
+import OpenAI from "openai";
+const client = new OpenAI();        // unchanged - now tracked`,
+  },
+  {
     label: 'curl',
     lang: 'bash',
     code: `curl http://localhost:4321/p/my-app/openai/v1/chat/completions \\
@@ -111,74 +131,74 @@ export default function Home() {
     <>
       <div className="deco-layer" aria-hidden="true">
         <svg
-          className="deco-cluster drift"
-          style={{ top: '31%', right: '3%', width: 240 }}
-          viewBox="0 0 240 190"
+          className="deco-dial spin-a"
+          style={{ top: '40%', left: '-70px', width: 300 }}
+          viewBox="0 0 400 400"
           fill="none"
         >
-          <g className="ln">
-            <line x1="20" y1="40" x2="90" y2="20" />
-            <line x1="90" y1="20" x2="150" y2="70" />
-            <line x1="150" y1="70" x2="120" y2="140" />
-            <line x1="150" y1="70" x2="220" y2="110" />
+          <g stroke="currentColor" strokeWidth="1">
+            <circle cx="200" cy="200" r="196" opacity="0.3" />
+            <circle cx="200" cy="200" r="182" strokeDasharray="1 8" opacity="0.6" />
+            <circle cx="200" cy="200" r="140" opacity="0.35" />
+            <circle cx="200" cy="200" r="132" strokeDasharray="1 5" opacity="0.45" />
+            <circle cx="200" cy="200" r="78" opacity="0.5" />
+            <circle cx="200" cy="200" r="30" opacity="0.6" />
+            <circle cx="200" cy="200" r="4" fill="currentColor" stroke="none" />
+            <circle cx="200" cy="120" r="70" opacity="0.4" />
+            <g opacity="0.4">
+              <line x1="200" y1="200" x2="200" y2="12" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(40 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(85 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(140 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(205 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(300 200 200)" />
+            </g>
           </g>
-          <circle className="s a tw" cx="20" cy="40" r="3" />
-          <circle className="s" cx="90" cy="20" r="2.4" />
-          <circle className="s a" cx="150" cy="70" r="3.4" />
-          <circle className="s tw-b" cx="120" cy="140" r="2.4" />
-          <circle className="s" cx="220" cy="110" r="2" />
-          <circle className="s" cx="60" cy="150" r="1.5" />
         </svg>
         <svg
-          className="deco-cluster drift-b"
-          style={{ top: '49%', left: '2%', width: 210 }}
-          viewBox="0 0 210 200"
+          className="deco-dial spin-b"
+          style={{ top: '63%', right: '-95px', width: 380 }}
+          viewBox="0 0 400 400"
           fill="none"
         >
-          <g className="ln">
-            <line x1="30" y1="30" x2="70" y2="110" />
-            <line x1="70" y1="110" x2="150" y2="90" />
-            <line x1="70" y1="110" x2="110" y2="180" />
+          <g stroke="currentColor" strokeWidth="1">
+            <circle cx="200" cy="200" r="196" opacity="0.3" />
+            <circle cx="200" cy="200" r="182" strokeDasharray="1 8" opacity="0.6" />
+            <circle cx="200" cy="200" r="140" opacity="0.35" />
+            <circle cx="200" cy="200" r="132" strokeDasharray="1 5" opacity="0.45" />
+            <circle cx="200" cy="200" r="78" opacity="0.5" />
+            <circle cx="200" cy="200" r="30" opacity="0.6" />
+            <circle cx="200" cy="200" r="4" fill="currentColor" stroke="none" />
+            <circle cx="200" cy="280" r="70" opacity="0.4" />
+            <g opacity="0.4">
+              <line x1="200" y1="200" x2="200" y2="12" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(25 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(70 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(160 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(235 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(320 200 200)" />
+            </g>
           </g>
-          <circle className="s" cx="30" cy="30" r="2.2" />
-          <circle className="s a tw-b" cx="70" cy="110" r="3.2" />
-          <circle className="s" cx="150" cy="90" r="2.4" />
-          <circle className="s tw" cx="110" cy="180" r="2" />
-          <circle className="s" cx="185" cy="40" r="1.5" />
         </svg>
         <svg
-          className="deco-cluster drift"
-          style={{ top: '69%', right: '5%', width: 250 }}
-          viewBox="0 0 250 200"
+          className="deco-dial spin-a"
+          style={{ top: '87%', left: '-40px', width: 240 }}
+          viewBox="0 0 400 400"
           fill="none"
         >
-          <g className="ln">
-            <line x1="40" y1="60" x2="120" y2="30" />
-            <line x1="120" y1="30" x2="200" y2="80" />
-            <line x1="120" y1="30" x2="140" y2="150" />
-            <line x1="140" y1="150" x2="60" y2="170" />
+          <g stroke="currentColor" strokeWidth="1">
+            <circle cx="200" cy="200" r="196" opacity="0.3" />
+            <circle cx="200" cy="200" r="182" strokeDasharray="1 8" opacity="0.6" />
+            <circle cx="200" cy="200" r="120" opacity="0.4" />
+            <circle cx="200" cy="200" r="60" opacity="0.5" />
+            <circle cx="200" cy="200" r="4" fill="currentColor" stroke="none" />
+            <g opacity="0.4">
+              <line x1="200" y1="200" x2="200" y2="12" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(55 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(120 200 200)" />
+              <line x1="200" y1="200" x2="388" y2="200" transform="rotate(250 200 200)" />
+            </g>
           </g>
-          <circle className="s a" cx="40" cy="60" r="3" />
-          <circle className="s tw" cx="120" cy="30" r="2.6" />
-          <circle className="s a tw-b" cx="200" cy="80" r="3.4" />
-          <circle className="s" cx="140" cy="150" r="2.4" />
-          <circle className="s" cx="60" cy="170" r="1.8" />
-        </svg>
-        <svg
-          className="deco-cluster drift-b"
-          style={{ top: '88%', left: '4%', width: 220 }}
-          viewBox="0 0 220 180"
-          fill="none"
-        >
-          <g className="ln">
-            <line x1="30" y1="120" x2="90" y2="60" />
-            <line x1="90" y1="60" x2="170" y2="90" />
-            <line x1="90" y1="60" x2="130" y2="20" />
-          </g>
-          <circle className="s tw" cx="30" cy="120" r="2.4" />
-          <circle className="s a" cx="90" cy="60" r="3.2" />
-          <circle className="s" cx="170" cy="90" r="2.4" />
-          <circle className="s a tw-b" cx="130" cy="20" r="2.8" />
         </svg>
       </div>
       <div className="hero-wrap">
@@ -304,6 +324,14 @@ export default function Home() {
               </div>
             </div>
           </div>
+          <p className="int-more">
+            Also: install a thin helper (<code>pip install aicc-sdk</code> or{' '}
+            <code>npm i @ai-command-center/sdk</code>) that sets the base URL for you; group calls
+            without touching the path via an <code>x-aicc-project</code> header; report batch or
+            unsupported-provider usage to <code>/api/track</code>; and swap{' '}
+            <code>/p/&lt;project&gt;</code> for a <code>/k/&lt;gateway-key&gt;</code> when auth is
+            on. <Link href="/docs/integrate">Full integration guide →</Link>
+          </p>
         </div>
       </section>
 
