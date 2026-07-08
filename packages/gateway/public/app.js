@@ -150,6 +150,7 @@
 
   // ------------------------------------------------------------ state
   const FEED_LIMIT = 50;
+  const PAGE_ROWS = 20;
   const state = {
     view: 'overview',
     range: '7d',
@@ -157,6 +158,13 @@
     q: '',
     errorsOnly: false,
     feedOffset: 0,
+    tracesPage: 0,
+    tracesQ: '',
+    promptsPage: 0,
+    promptsQ: '',
+    modelsPage: 0,
+    modelsQ: '',
+    alertsQ: '',
     cur: localStorage.getItem('aicc-currency') || null,
     fx: null,
   };
@@ -166,6 +174,11 @@
   let colorMap = new Map();
   let refreshTimer = null;
   let loadSeq = 0;
+  // Cached list data for the paginated/filtered tabs (paging is client-side).
+  let tracesAll = [];
+  let promptsAll = [];
+  let modelsAll = [];
+  let alertsData = { alerts: [], anomalies: [], budgets: [], isAdmin: false };
 
   async function apiSend(method, path, body) {
     const res = await fetch(path, {
@@ -717,12 +730,54 @@
     }
   }
 
+  // ---- pagination + client-side filter shared by traces/prompts/models ----
+  function pageSlice(arr, page) {
+    const total = arr.length;
+    const last = Math.max(0, Math.ceil(total / PAGE_ROWS) - 1);
+    const p = Math.min(Math.max(0, page), last);
+    const start = p * PAGE_ROWS;
+    return { total, page: p, start, rows: arr.slice(start, start + PAGE_ROWS) };
+  }
+  function renderPager(key, start, shown, total) {
+    const info = $(key + 'PageInfo');
+    if (!info) return;
+    info.textContent = `${total ? start + 1 : 0}-${start + shown} of ${fmtNum(total)}`;
+    $(key + 'Prev').disabled = start === 0;
+    $(key + 'Next').disabled = start + shown >= total;
+  }
+  function resetPages() {
+    state.feedOffset = 0;
+    state.tracesPage = 0;
+    state.promptsPage = 0;
+    state.modelsPage = 0;
+  }
+
   // ---- Traces view ----
   async function loadTraces() {
-    const { items } = await api('/api/traces?' + rangeQuery({ limit: '100' }));
-    $('tracesNote').textContent = items.length ? `${items.length} sessions` : '';
-    $('tracesEmpty').hidden = items.length > 0;
-    $('tracesBody').innerHTML = items
+    const { items } = await api('/api/traces?' + rangeQuery({ limit: '500' }));
+    tracesAll = items;
+    $('traceDetailCard').hidden = true;
+    renderTraces();
+  }
+  function renderTraces() {
+    const q = state.tracesQ.toLowerCase();
+    const filtered = q
+      ? tracesAll.filter((t) =>
+          `${t.project} ${t.providers.join(' ')} ${t.models.join(' ')} ${t.id}`
+            .toLowerCase()
+            .includes(q),
+        )
+      : tracesAll;
+    const { total, page, start, rows } = pageSlice(filtered, state.tracesPage);
+    state.tracesPage = page;
+    $('tracesNote').textContent = total ? `${fmtNum(total)} session${total === 1 ? '' : 's'}` : '';
+    const emptyEl = $('tracesEmpty');
+    emptyEl.hidden = total > 0;
+    if (!total)
+      emptyEl.innerHTML = tracesAll.length
+        ? 'No traces match your filter.'
+        : 'No traces yet. Send an <code>x-aicc-trace</code> header to group calls into a session.';
+    $('tracesBody').innerHTML = rows
       .map(
         (t) => `<tr class="clickable" data-trace="${esc(t.id)}">
         <td class="t-dim">${fmtDateTime(t.start)}</td>
@@ -734,7 +789,7 @@
         <td class="num">${fmtDuration(t.spanMs)}</td></tr>`,
       )
       .join('');
-    $('traceDetailCard').hidden = true;
+    renderPager('traces', start, rows.length, total);
   }
 
   async function openTrace(id) {
@@ -762,8 +817,25 @@
   // ---- Prompts view ----
   async function loadPrompts() {
     const { items } = await api('/api/prompts?' + rangeQuery());
-    $('promptsEmpty').hidden = items.length > 0;
-    $('promptsBody').innerHTML = items
+    promptsAll = items;
+    renderPrompts();
+  }
+  function renderPrompts() {
+    const q = state.promptsQ.toLowerCase();
+    const filtered = q
+      ? promptsAll.filter((p) =>
+          `${p.prompt} ${p.version || ''} ${p.project}`.toLowerCase().includes(q),
+        )
+      : promptsAll;
+    const { total, page, start, rows } = pageSlice(filtered, state.promptsPage);
+    state.promptsPage = page;
+    const emptyEl = $('promptsEmpty');
+    emptyEl.hidden = total > 0;
+    if (!total)
+      emptyEl.innerHTML = promptsAll.length
+        ? 'No prompts match your filter.'
+        : 'No prompts tracked. Send an <code>x-aicc-prompt</code> (and <code>x-aicc-prompt-version</code>) header.';
+    $('promptsBody').innerHTML = rows
       .map(
         (p) => `<tr>
         <td>${esc(p.prompt)}</td>
@@ -777,13 +849,29 @@
         <td class="num">${fmtMs(p.p95LatencyMs)}</td></tr>`,
       )
       .join('');
+    renderPager('prompts', start, rows.length, total);
   }
 
   // ---- Models view ----
   async function loadModels() {
     const { items } = await api('/api/models?' + rangeQuery());
-    $('modelsEmpty').hidden = items.length > 0;
-    $('modelsBody').innerHTML = items
+    modelsAll = items;
+    renderModels();
+  }
+  function renderModels() {
+    const q = state.modelsQ.toLowerCase();
+    const filtered = q
+      ? modelsAll.filter((m) => `${m.provider} ${m.model}`.toLowerCase().includes(q))
+      : modelsAll;
+    const { total, page, start, rows } = pageSlice(filtered, state.modelsPage);
+    state.modelsPage = page;
+    const emptyEl = $('modelsEmpty');
+    emptyEl.hidden = total > 0;
+    if (!total)
+      emptyEl.textContent = modelsAll.length
+        ? 'No models match your filter.'
+        : 'No model data in range.';
+    $('modelsBody').innerHTML = rows
       .map(
         (m) => `<tr>
         <td><span class="t-dim">${esc(m.provider)} ·</span> ${esc(m.model)}</td>
@@ -796,6 +884,7 @@
         <td class="num${m.errorRate > 0.05 ? ' err-count' : ''}">${(m.errorRate * 100).toFixed(1)}%</td></tr>`,
       )
       .join('');
+    renderPager('models', start, rows.length, total);
   }
 
   // ---- Alerts view ----
@@ -805,9 +894,34 @@
       api('/api/alerts'),
       api('/api/anomalies?' + rangeQuery({ range: '30d' })),
     ]);
+    alertsData = {
+      alerts: data.alerts || [],
+      anomalies: anomaliesRes.anomalies || [],
+      budgets: data.budgets || [],
+      isAdmin,
+    };
+    $('budgetsNote').textContent = 'this calendar month, in USD';
+
+    // Admin budget form (populated once per load, not on every filter keystroke)
+    $('budgetForm').hidden = !isAdmin;
+    if (isAdmin) {
+      const known = (await api('/api/projects')).map((p) => p.project);
+      $('budgetProject').innerHTML = known
+        .map((p) => `<option value="${esc(p)}">${esc(p)}</option>`)
+        .join('');
+    }
+    $('budgetErr').textContent = '';
+    renderAlerts();
+  }
+  function renderAlerts() {
+    const q = state.alertsQ.toLowerCase();
+    const match = (s) => !q || String(s).toLowerCase().includes(q);
+    const { alerts, anomalies, budgets, isAdmin } = alertsData;
     const sevRank = (a) => (a.severity === 'critical' ? 0 : 1);
-    $('alertsList').innerHTML = data.alerts.length
-      ? data.alerts
+
+    const fAlerts = alerts.filter((a) => match(`${a.type} ${a.message} ${a.project || ''}`));
+    $('alertsList').innerHTML = fAlerts.length
+      ? fAlerts
           .sort((a, b) => sevRank(a) - sevRank(b))
           .map(
             (a) => `<div class="alert-item ${a.severity}">
@@ -815,23 +929,22 @@
           <span>${esc(a.message)}</span></div>`,
           )
           .join('')
-      : '<div class="alerts-empty">No active alerts. All projects within budget and thresholds.</div>';
+      : `<div class="alerts-empty">${alerts.length ? 'No alerts match your filter.' : 'No active alerts. All projects within budget and thresholds.'}</div>`;
 
-    const anomalies = anomaliesRes.anomalies || [];
-    $('anomaliesList').innerHTML = anomalies.length
-      ? anomalies
+    const fAnom = anomalies.filter((a) => match(`${a.type} ${a.message} ${a.project || ''}`));
+    $('anomaliesList').innerHTML = fAnom.length
+      ? fAnom
           .map(
             (a) => `<div class="alert-item ${a.severity}">
           <span class="a-type">${esc(a.type.replace('_', ' '))}</span>
           <span>${fmtDate(a.date)} - ${esc(a.message)}</span></div>`,
           )
           .join('')
-      : '<div class="alerts-empty">No anomalies detected.</div>';
+      : `<div class="alerts-empty">${anomalies.length ? 'No anomalies match your filter.' : 'No anomalies detected.'}</div>`;
 
-    // Budgets with progress
-    const budgets = data.budgets || [];
-    $('budgetsList').innerHTML = budgets.length
-      ? budgets
+    const fBudg = budgets.filter((b) => match(b.project));
+    $('budgetsList').innerHTML = fBudg.length
+      ? fBudg
           .map((b) => {
             const cls = b.pct >= 100 ? 'over' : b.pct >= b.alertAtPct ? 'warn' : '';
             return `<div class="budget-row">
@@ -842,18 +955,7 @@
           </div>`;
           })
           .join('')
-      : '<div class="alerts-empty">No budgets set yet.</div>';
-    $('budgetsNote').textContent = 'this calendar month, in USD';
-
-    // Admin budget form
-    $('budgetForm').hidden = !isAdmin;
-    if (isAdmin) {
-      const known = (await api('/api/projects')).map((p) => p.project);
-      $('budgetProject').innerHTML = known
-        .map((p) => `<option value="${esc(p)}">${esc(p)}</option>`)
-        .join('');
-    }
-    $('budgetErr').textContent = '';
+      : `<div class="alerts-empty">${budgets.length ? 'No budgets match your filter.' : 'No budgets set yet.'}</div>`;
   }
 
   function populateProjects(projects) {
@@ -918,7 +1020,7 @@
     const btn = ev.target.closest('button[data-range]');
     if (!btn) return;
     state.range = btn.dataset.range;
-    state.feedOffset = 0;
+    resetPages();
     for (const b of $('rangeSeg').children) b.classList.toggle('on', b === btn);
     loadAll(false);
   });
@@ -934,7 +1036,7 @@
 
   $('projectSel').addEventListener('change', (ev) => {
     state.project = ev.target.value;
-    state.feedOffset = 0;
+    resetPages();
     loadAll(false);
   });
 
@@ -959,6 +1061,35 @@
   $('feedNext').addEventListener('click', () => {
     state.feedOffset += FEED_LIMIT;
     loadOverview(++loadSeq);
+  });
+
+  // Per-tab client-side search + pagination (traces / prompts / models).
+  function wireTab(key, renderFn) {
+    let tmr = null;
+    $(key + 'Search').addEventListener('input', (ev) => {
+      state[key + 'Q'] = ev.target.value.trim();
+      state[key + 'Page'] = 0;
+      clearTimeout(tmr);
+      tmr = setTimeout(renderFn, 200);
+    });
+    $(key + 'Prev').addEventListener('click', () => {
+      state[key + 'Page'] = Math.max(0, state[key + 'Page'] - 1);
+      renderFn();
+    });
+    $(key + 'Next').addEventListener('click', () => {
+      state[key + 'Page'] += 1;
+      renderFn();
+    });
+  }
+  wireTab('traces', renderTraces);
+  wireTab('prompts', renderPrompts);
+  wireTab('models', renderModels);
+
+  let alertsSearchTimer = null;
+  $('alertsSearch').addEventListener('input', (ev) => {
+    state.alertsQ = ev.target.value.trim();
+    clearTimeout(alertsSearchTimer);
+    alertsSearchTimer = setTimeout(renderAlerts, 200);
   });
 
   $('tracesBody').addEventListener('click', (ev) => {

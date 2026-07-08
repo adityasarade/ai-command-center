@@ -207,9 +207,16 @@
           <div id="traceTimeline" class="timeline"></div>
         </section>
         <section class="card">
-          <div class="card-head">
+          <div class="card-head feed-head">
             <h2>Traces / sessions</h2>
-            <span class="card-note" id="tracesNote"></span>
+            <div class="feed-controls">
+              <span class="card-note" id="tracesNote"></span>
+              <input
+                type="search"
+                id="tracesSearch"
+                placeholder="filter by project, model, trace id…"
+              />
+            </div>
           </div>
           <div class="table-wrap">
             <table>
@@ -230,14 +237,26 @@
               No traces yet. Send an <code>x-aicc-trace</code> header to group calls into a session.
             </div>
           </div>
+          <div class="pager" id="tracesPager">
+            <button class="mini" id="tracesPrev">← prev</button>
+            <span class="pager-info" id="tracesPageInfo"></span>
+            <button class="mini" id="tracesNext">next →</button>
+          </div>
         </section>
       </div>
 
       <div class="view" id="view-prompts" hidden>
         <section class="card">
-          <div class="card-head">
+          <div class="card-head feed-head">
             <h2>Prompts &amp; versions</h2>
-            <span class="card-note">per prompt template, compare versions</span>
+            <div class="feed-controls">
+              <span class="card-note">compare versions</span>
+              <input
+                type="search"
+                id="promptsSearch"
+                placeholder="filter by prompt, version, project…"
+              />
+            </div>
           </div>
           <div class="table-wrap">
             <table>
@@ -261,14 +280,22 @@
               <code>x-aicc-prompt-version</code>) header.
             </div>
           </div>
+          <div class="pager" id="promptsPager">
+            <button class="mini" id="promptsPrev">← prev</button>
+            <span class="pager-info" id="promptsPageInfo"></span>
+            <button class="mini" id="promptsNext">next →</button>
+          </div>
         </section>
       </div>
 
       <div class="view" id="view-models" hidden>
         <section class="card">
-          <div class="card-head">
+          <div class="card-head feed-head">
             <h2>Model comparison</h2>
-            <span class="card-note">effective cost, latency and error rate side by side</span>
+            <div class="feed-controls">
+              <span class="card-note">effective cost, latency, error rate</span>
+              <input type="search" id="modelsSearch" placeholder="filter by provider or model…" />
+            </div>
           </div>
           <div class="table-wrap">
             <table>
@@ -288,13 +315,27 @@
             </table>
             <div class="feed-empty" id="modelsEmpty" hidden>No model data in range.</div>
           </div>
+          <div class="pager" id="modelsPager">
+            <button class="mini" id="modelsPrev">← prev</button>
+            <span class="pager-info" id="modelsPageInfo"></span>
+            <button class="mini" id="modelsNext">next →</button>
+          </div>
         </section>
       </div>
 
       <div class="view" id="view-alerts" hidden>
         <section class="grid grid-b">
           <div class="card span2">
-            <div class="card-head"><h2>Active alerts</h2></div>
+            <div class="card-head feed-head">
+              <h2>Active alerts</h2>
+              <div class="feed-controls">
+                <input
+                  type="search"
+                  id="alertsSearch"
+                  placeholder="filter alerts, anomalies &amp; budgets…"
+                />
+              </div>
+            </div>
             <div id="alertsList" class="alerts-list"></div>
           </div>
           <div class="card">
