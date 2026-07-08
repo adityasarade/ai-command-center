@@ -260,6 +260,9 @@ export default function Home() {
             <Link href="/docs" className="btn btn-primary">
               Get started
             </Link>
+            <a href="/demo" className="btn btn-ghost">
+              Live demo →
+            </a>
             <span className="term">
               <span className="prompt">$</span> npx ai-command-center <span className="cursor" />
             </span>
@@ -285,7 +288,9 @@ export default function Home() {
         <div className="wrap">
           <div className="cap">
             <span className="mono-label">The dashboard</span>
-            <p>live sample - toggle currency &amp; range</p>
+            <p>
+              <a href="/demo">open the full live demo →</a>
+            </p>
           </div>
           <DemoDashboard />
         </div>

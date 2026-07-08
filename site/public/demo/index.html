@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <base href="/demo/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Command Center</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d0d0d'/%3E%3Cpath d='M16 5 27 16 16 27 5 16Z' fill='none' stroke='%233987e5' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%230ca30c'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
+          <path d="M16 4 28 16 16 28 4 16Z" fill="none" stroke="var(--accent)" stroke-width="2.5" />
+          <circle cx="16" cy="16" r="3.2" fill="var(--status-good)" />
+        </svg>
+        <span class="wordmark">AI Command Center</span>
+        <span class="ver" id="metaVersion"></span>
+      </div>
+      <div class="controls">
+        <div class="seg" id="curSeg" role="tablist" aria-label="Display currency"></div>
+        <div class="seg" id="rangeSeg" role="tablist" aria-label="Time range">
+          <button data-range="24h" role="tab">24H</button>
+          <button data-range="7d" class="on" role="tab">7D</button>
+          <button data-range="30d" role="tab">30D</button>
+          <button data-range="all" role="tab">ALL</button>
+        </div>
+        <select id="projectSel" aria-label="Project filter">
+          <option value="">All projects</option>
+        </select>
+        <div class="live" id="liveDot" title="Live event stream">
+          <span class="led"></span><span class="live-label">LIVE</span>
+        </div>
+        <div class="userbox" id="userBox" hidden>
+          <span class="user-name" id="userName"></span>
+          <button class="linkbtn" id="settingsBtn" hidden>settings</button>
+          <button class="linkbtn" id="logoutBtn">logout</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="callout" id="setupCallout" hidden>
+      <span
+        >⚠ This gateway is open to anyone who can reach it. Create the admin account to enable login
+        and per-project gateway keys.</span
+      >
+      <button class="btn btn-sm primary" id="calloutSetupBtn">Create admin account</button>
+    </div>
+
+    <section id="authGate" class="empty" hidden>
+      <div class="empty-card gate-card">
+        <svg viewBox="0 0 32 32" width="42" height="42" aria-hidden="true">
+          <path d="M16 4 28 16 16 28 4 16Z" fill="none" stroke="var(--accent)" stroke-width="2" />
+          <circle cx="16" cy="16" r="3" fill="var(--status-good)" />
+        </svg>
+        <h1 id="gateTitle">Sign in</h1>
+        <p id="gateDesc"></p>
+        <form id="gateForm" autocomplete="on">
+          <input
+            type="text"
+            id="gateUser"
+            name="username"
+            placeholder="username"
+            autocomplete="username"
+            required
+          />
+          <input
+            type="password"
+            id="gatePass"
+            name="password"
+            placeholder="password (min 8 chars)"
+            autocomplete="current-password"
+            required
+          />
+          <button class="btn primary" type="submit" id="gateSubmit">Sign in</button>
+          <div class="gate-error" id="gateError" hidden></div>
+        </form>
+        <p class="hint" id="gateCancelWrap" hidden>
+          <button class="linkbtn" id="gateCancel">← back to dashboard</button>
+        </p>
+      </div>
+    </section>
+
+    <main id="main" hidden>
+      <nav class="views" id="viewNav" role="tablist" aria-label="Dashboard views">
+        <button data-view="overview" class="on" role="tab">Overview</button>
+        <button data-view="traces" role="tab">Traces</button>
+        <button data-view="prompts" role="tab">Prompts</button>
+        <button data-view="models" role="tab">Models</button>
+        <button data-view="alerts" role="tab">
+          Alerts <span class="badge" id="alertBadge" hidden></span>
+        </button>
+      </nav>
+
+      <section class="card admin" id="adminPanel" hidden>
+        <div class="card-head">
+          <h2>Settings - access control</h2>
+          <button class="linkbtn" id="adminClose">close ×</button>
+        </div>
+        <div class="admin-grid">
+          <div class="admin-col" id="adminProjects"></div>
+          <div class="admin-col" id="adminTeams"></div>
+          <div class="admin-col" id="adminUsers"></div>
+        </div>
+      </section>
+
+      <div class="view" id="view-overview">
+        <section class="tiles">
+          <div class="tile hero">
+            <div class="tile-label">Total spend</div>
+            <div class="tile-value" id="tSpend">-</div>
+            <div class="tile-sub" id="tSpendSub">&nbsp;</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Requests</div>
+            <div class="tile-value" id="tReqs">-</div>
+            <div class="tile-sub" id="tReqsSub">&nbsp;</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Tokens</div>
+            <div class="tile-value" id="tTokens">-</div>
+            <div class="tile-sub" id="tTokensSub">&nbsp;</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Latency p50</div>
+            <div class="tile-value" id="tLatency">-</div>
+            <div class="tile-sub" id="tLatencySub">&nbsp;</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">Projects</div>
+            <div class="tile-value" id="tProjects">-</div>
+            <div class="tile-sub" id="tProjectsSub">&nbsp;</div>
+          </div>
+        </section>
+
+        <section class="grid grid-b">
+          <div class="card span2">
+            <div class="card-head">
+              <h2>Spend over time</h2>
+              <span class="card-note" id="spendNote"></span>
+            </div>
+            <div class="chart-box tall"><canvas id="spendChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Spend by project</h2></div>
+            <div class="chart-box tall"><canvas id="projectChart"></canvas></div>
+          </div>
+        </section>
+
+        <section class="grid grid-c">
+          <div class="card">
+            <div class="card-head"><h2>Spend by model</h2></div>
+            <div class="chart-box"><canvas id="modelChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Requests &amp; errors</h2></div>
+            <div class="chart-box"><canvas id="reqChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Providers</h2></div>
+            <div class="provider-list" id="providerList"></div>
+          </div>
+        </section>
+
+        <section class="card feed">
+          <div class="card-head feed-head">
+            <h2>Request feed</h2>
+            <div class="feed-controls">
+              <input type="search" id="feedSearch" placeholder="filter by model, project…" />
+              <label class="check"><input type="checkbox" id="errorsOnly" /> errors only</label>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table id="feedTable">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Project</th>
+                  <th>Provider · Model</th>
+                  <th class="num">Tokens</th>
+                  <th class="num">Cost</th>
+                  <th class="num">Latency</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="feedBody"></tbody>
+            </table>
+            <div class="feed-empty" id="feedEmpty" hidden>No requests match.</div>
+          </div>
+          <div class="pager" id="feedPager">
+            <button class="mini" id="feedPrev">← newer</button>
+            <span class="pager-info" id="feedPageInfo"></span>
+            <button class="mini" id="feedNext">older →</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="view" id="view-traces" hidden>
+        <section class="card" id="traceDetailCard" hidden>
+          <div class="card-head">
+            <h2 id="traceDetailTitle">Trace timeline</h2>
+            <button class="linkbtn" id="traceClose">close ×</button>
+          </div>
+          <div id="traceTimeline" class="timeline"></div>
+        </section>
+        <section class="card">
+          <div class="card-head feed-head">
+            <h2>Traces / sessions</h2>
+            <div class="feed-controls">
+              <span class="card-note" id="tracesNote"></span>
+              <input
+                type="search"
+                id="tracesSearch"
+                placeholder="filter by project, model, trace id…"
+              />
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Started</th>
+                  <th>Project</th>
+                  <th class="num">Calls</th>
+                  <th>Providers · Models</th>
+                  <th class="num">Tokens</th>
+                  <th class="num">Cost</th>
+                  <th class="num">Span</th>
+                </tr>
+              </thead>
+              <tbody id="tracesBody"></tbody>
+            </table>
+            <div class="feed-empty" id="tracesEmpty" hidden>
+              No traces yet. Send an <code>x-aicc-trace</code> header to group calls into a session.
+            </div>
+          </div>
+          <div class="pager" id="tracesPager">
+            <button class="mini" id="tracesPrev">← prev</button>
+            <span class="pager-info" id="tracesPageInfo"></span>
+            <button class="mini" id="tracesNext">next →</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="view" id="view-prompts" hidden>
+        <section class="card">
+          <div class="card-head feed-head">
+            <h2>Prompts &amp; versions</h2>
+            <div class="feed-controls">
+              <span class="card-note">compare versions</span>
+              <input
+                type="search"
+                id="promptsSearch"
+                placeholder="filter by prompt, version, project…"
+              />
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Prompt</th>
+                  <th>Version</th>
+                  <th>Project</th>
+                  <th class="num">Requests</th>
+                  <th class="num">Err rate</th>
+                  <th class="num">Avg cost</th>
+                  <th class="num">Tokens</th>
+                  <th class="num">p50</th>
+                  <th class="num">p95</th>
+                </tr>
+              </thead>
+              <tbody id="promptsBody"></tbody>
+            </table>
+            <div class="feed-empty" id="promptsEmpty" hidden>
+              No prompts tracked. Send an <code>x-aicc-prompt</code> (and
+              <code>x-aicc-prompt-version</code>) header.
+            </div>
+          </div>
+          <div class="pager" id="promptsPager">
+            <button class="mini" id="promptsPrev">← prev</button>
+            <span class="pager-info" id="promptsPageInfo"></span>
+            <button class="mini" id="promptsNext">next →</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="view" id="view-models" hidden>
+        <section class="card">
+          <div class="card-head feed-head">
+            <h2>Model comparison</h2>
+            <div class="feed-controls">
+              <span class="card-note">effective cost, latency, error rate</span>
+              <input type="search" id="modelsSearch" placeholder="filter by provider or model…" />
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Provider · Model</th>
+                  <th class="num">Requests</th>
+                  <th class="num">Spend</th>
+                  <th class="num">$/1M tok</th>
+                  <th class="num">Tokens</th>
+                  <th class="num">p50</th>
+                  <th class="num">p95</th>
+                  <th class="num">Err rate</th>
+                </tr>
+              </thead>
+              <tbody id="modelsBody"></tbody>
+            </table>
+            <div class="feed-empty" id="modelsEmpty" hidden>No model data in range.</div>
+          </div>
+          <div class="pager" id="modelsPager">
+            <button class="mini" id="modelsPrev">← prev</button>
+            <span class="pager-info" id="modelsPageInfo"></span>
+            <button class="mini" id="modelsNext">next →</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="view" id="view-alerts" hidden>
+        <section class="grid grid-b">
+          <div class="card span2">
+            <div class="card-head feed-head">
+              <h2>Active alerts</h2>
+              <div class="feed-controls">
+                <input
+                  type="search"
+                  id="alertsSearch"
+                  placeholder="filter alerts, anomalies &amp; budgets…"
+                />
+              </div>
+            </div>
+            <div id="alertsList" class="alerts-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h2>Anomalies</h2>
+              <span class="card-note">rule-based, last 30d</span>
+            </div>
+            <div id="anomaliesList" class="alerts-list"></div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head">
+            <h2>Budgets</h2>
+            <span class="card-note" id="budgetsNote"></span>
+          </div>
+          <div id="budgetsList" class="budgets-list"></div>
+          <div class="admin-form" id="budgetForm" hidden style="margin-top: 14px">
+            <select id="budgetProject" aria-label="Project"></select>
+            <input id="budgetAmount" type="number" min="0" step="1" placeholder="monthly $ (USD)" />
+            <input id="budgetPct" type="number" min="1" max="100" placeholder="alert at %" />
+            <button class="mini" id="budgetSave">set budget</button>
+          </div>
+          <div class="admin-err" id="budgetErr"></div>
+        </section>
+      </div>
+    </main>
+
+    <section id="emptyState" class="empty" hidden>
+      <div class="empty-card">
+        <svg viewBox="0 0 32 32" width="42" height="42" aria-hidden="true">
+          <path d="M16 4 28 16 16 28 4 16Z" fill="none" stroke="var(--accent)" stroke-width="2" />
+          <circle cx="16" cy="16" r="3" fill="var(--status-good)" />
+        </svg>
+        <h1>Waiting for your first AI call</h1>
+        <p>
+          Point any project - Python, Node, Java, anything - at this gateway and every LLM call
+          shows up here with tokens, cost and latency. Your API keys never change hands.
+        </p>
+        <pre class="snippet" id="emptySnippet"></pre>
+        <p class="hint">More languages: <code>npx ai-command-center snippets</code></p>
+        <div class="empty-actions">
+          <button class="btn primary" id="seedBtn">Seed 14 days of demo data</button>
+          <span class="hint">instantly explore the dashboard - removable anytime</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span id="footMeta"></span>
+      <span class="foot-right">
+        <span class="chip warn" id="unpricedChip" hidden></span>
+        <span class="chip" id="demoChip" hidden></span>
+      </span>
+    </footer>
+
+    <script src="vendor/chart.umd.js"></script>
+    <script type="module" src="demo-boot.js"></script>
+  </body>
+</html>

@@ -12,6 +12,9 @@ export function Nav() {
           <b>ai-command-center</b>
         </Link>
         <div className="nav-links">
+          <a href="/demo" className="hide-sm">
+            Demo
+          </a>
           <Link href="/docs" className="hide-sm">
             Docs
           </Link>

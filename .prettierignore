@@ -5,6 +5,7 @@ site/out
 packages/gateway/public/vendor
 assets
 site/public/dashboard.svg
+site/public/demo
 CHANGELOG.md
 evals/REPORT.md
 package-lock.json
