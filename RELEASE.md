@@ -26,9 +26,9 @@
 ## ⏳ Ready to publish: 0.2.0
 
 `packages/gateway` is bumped to `0.2.0` - provider routing (failover +
-load-balancing), offline quality evals, and a read-only viewer role with
-per-project grants. Committed, CI-green, and verified live in the dashboard
-(routing `via` tag, an eval run scored 4.00/5). The npm upload needs your OTP:
+load-balancing), a read-only viewer role with per-project grants, and pricing
+that stays current from the LiteLLM price sheet. Committed, CI-green, and
+verified live in the dashboard (routing `via` tag). The npm upload needs your OTP:
 
 ```bash
 cd packages/gateway

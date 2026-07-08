@@ -17,10 +17,10 @@ Integrate (replace the origin with this gateway's origin):
 - Report usage the proxy can't see: `POST <origin>/api/track` with JSON {project, provider, model, tokensIn, tokensOut, trace?, prompt?, promptVersion?}
 - Provider routing (opt-in): call `<origin>/p/<project>/r/<route>/…` to fail over / load-balance across a configured pool of same-schema providers (config.routes)
 
-Dashboard views: Overview (cost/usage), Traces (sessions), Prompts (versions + eval scores), Models (comparison), Alerts (budgets + anomalies), Evals (offline quality scoring).
+Dashboard views: Overview (cost/usage), Traces (sessions), Prompts (versions), Models (comparison), Alerts (budgets + anomalies).
 
 Access control: optional login; roles admin / member / read-only viewer; team-scoped visibility plus per-user project grants; per-project gateway keys.
 
-HTTP API (JSON): GET /health, /api/meta, /api/stats?range=7d, /api/requests, /api/projects, /api/fx, /api/events (SSE), /api/traces, /api/trace?id=, /api/prompts, /api/models, /api/anomalies, /api/alerts, /api/evals, /api/evals/run?id=; POST /api/track, /api/evals/run, /api/evals/dataset (admin); admin: POST /api/admin/budget.
+HTTP API (JSON): GET /health, /api/meta, /api/stats?range=7d, /api/requests, /api/projects, /api/fx, /api/events (SSE), /api/traces, /api/trace?id=, /api/prompts, /api/models, /api/anomalies, /api/alerts; POST /api/track; admin: POST /api/admin/budget.
 
 Docs & source: https://github.com/adityasarade/ai-command-center - MIT.

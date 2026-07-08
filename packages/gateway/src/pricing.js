@@ -29,10 +29,30 @@ export class PricingEngine {
       fs.readFileSync(path.join(__dirname, '..', 'pricing', 'pricing.json'), 'utf8'),
     );
     delete shipped._comment;
+    // Three layers, lowest → highest precedence:
+    //   shipped defaults  <  live market prices (LiteLLM sheet)  <  config overrides.
+    // Market prices keep the table current; config always wins for deliberate overrides.
+    this.shipped = lowerKeys(shipped);
+    this.overrides = lowerKeys(overrides);
+    this.market = {};
+    this._rebuild();
+  }
+
+  /** Merge in a fresh market price table (USD per 1M tokens), then rebuild. */
+  setMarket(market = {}) {
+    this.market = lowerKeys(market);
+    this._rebuild();
+  }
+
+  _rebuild() {
     this.table = {};
-    for (const [key, price] of Object.entries({ ...shipped, ...overrides })) {
-      if (price == null) continue;
-      this.table[key.toLowerCase()] = price;
+    for (const [key, price] of Object.entries({
+      ...this.shipped,
+      ...this.market,
+      ...this.overrides,
+    })) {
+      if (price == null) continue; // a null in any layer disables a shipped entry
+      this.table[key] = price;
     }
     // Parse keys into {provider, modelPrefix}. Sort by modelPrefix length so the
     // most specific model match wins - and crucially compare the MODEL part only,
@@ -89,4 +109,10 @@ export class PricingEngine {
       per(usage.output, price.out);
     return { costUsd, priced: true };
   }
+}
+
+function lowerKeys(obj) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj || {})) out[k.toLowerCase()] = v;
+  return out;
 }

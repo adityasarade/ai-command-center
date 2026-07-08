@@ -100,11 +100,6 @@ const FEATURES = [
     'Opt-in routes fail over and load-balance across providers - no client change, no new dependency.',
   ],
   [
-    'Evals',
-    'Quality scoring',
-    'Score prompt versions offline with an LLM judge against datasets you own - no live-traffic capture.',
-  ],
-  [
     'Privacy',
     'Keys & data stay put',
     'Provider keys pass through and are never logged. Prompt and response bodies are never stored.',
@@ -131,7 +126,6 @@ const ROADMAP = [
   ['shipped', 'Anomaly detection', 'Rule-based cost-spike and error-burst flags, per project.'],
   ['shipped', 'Model comparison', 'Effective cost/1M tokens, p50/p95 latency and error rate.'],
   ['shipped', 'Provider routing', 'Opt-in failover and load-balancing across providers.'],
-  ['shipped', 'Quality evals', 'Offline LLM-as-judge scoring of prompt versions on your datasets.'],
   ['shipped', 'Roles & project grants', 'Read-only viewer role and per-user project access.'],
   ['next', 'SSO (OIDC / SAML)', 'Single sign-on beyond the built-in accounts.'],
   ['next', 'Managed option', 'A hosted deployment for teams that would rather not self-host.'],
@@ -420,10 +414,9 @@ export default function Home() {
             </p>
           </div>
           <div className="note">
-            Reach for a full platform when you need distributed span trees, large-scale eval
-            pipelines or advanced routing policies. Reach for this when you want honest cost and
-            usage visibility - plus opt-in failover routing and offline evals - across many
-            projects, self-hosted, in minutes.{' '}
+            Reach for a full platform when you need distributed span trees, LLM-as-judge evals or
+            advanced routing policies. Reach for this when you want honest cost and usage visibility
+            - plus opt-in failover routing - across many projects, self-hosted, in minutes.{' '}
             <Link href="/docs/comparison">See the fact-checked comparison →</Link>
           </div>
         </div>

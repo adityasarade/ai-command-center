@@ -25,6 +25,27 @@ test('crash-truncated JSONL: partial trailing line is repaired, next append surv
   assert.deepEqual(s2.records.map((r) => r.id).sort(), ['a', 'c']);
 });
 
+test('prune drops records older than the cutoff and persists the rewrite', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aicc-store-'));
+  const now = Date.now();
+  const s = new Store(dir).init();
+  s.append({ id: 'old', ts: now - 40 * 864e5 });
+  s.append({ id: 'recent', ts: now - 2 * 864e5 });
+  const removed = s.prune(now - 30 * 864e5); // 30-day retention
+  await s.flush();
+  assert.equal(removed, 1);
+  assert.deepEqual(
+    s.records.map((r) => r.id),
+    ['recent'],
+  );
+  const reloaded = new Store(dir).init();
+  assert.deepEqual(
+    reloaded.records.map((r) => r.id),
+    ['recent'],
+    'prune persisted across reload',
+  );
+});
+
 test('clear(simulatedOnly) keeps real records', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aicc-store-'));
   const s = new Store(dir).init();

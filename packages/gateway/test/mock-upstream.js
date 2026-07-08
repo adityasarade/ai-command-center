@@ -41,20 +41,6 @@ export function startMockUpstream(opts = {}) {
     // ---- OpenAI chat completions ----
     if (url.pathname === '/v1/chat/completions') {
       const model = body?.model || 'gpt-test';
-      // JSON mode (used by the eval judge): return a parseable score object.
-      if (body?.response_format?.type === 'json_object') {
-        res.writeHead(200, { 'content-type': 'application/json' });
-        return res.end(
-          JSON.stringify({
-            id: 'j1',
-            model,
-            choices: [
-              { message: { role: 'assistant', content: '{"score": 4, "reason": "clear answer"}' } },
-            ],
-            usage: { prompt_tokens: 40, completion_tokens: 12 },
-          }),
-        );
-      }
       if (body?.stream) {
         res.writeHead(200, { 'content-type': 'text/event-stream' });
         const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);

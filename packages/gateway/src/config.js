@@ -25,6 +25,9 @@ const DEFAULTS = {
   allowedOrigins: [],
   // Optional URL that receives a POST with newly-fired alerts (budget/error/latency).
   alertWebhook: null,
+  // Optional retention: prune request records older than N days (on start + daily),
+  // keeping the JSONL + in-memory store bounded. null = keep everything (default).
+  retentionDays: null,
   // Central provider keys (optional). Pass-through of the caller's own key always wins.
   // e.g. { "openai": "sk-...", "anthropic": "sk-ant-..." }
   keys: {},
@@ -40,7 +43,13 @@ const DEFAULTS = {
   upstreams: {},
   // Pricing overrides / additions, USD per 1M tokens, longest-prefix match on model name.
   // e.g. { "my-finetune": { "in": 1.0, "out": 4.0 }, "openrouter:*": { "in": 0, "out": 0 } }
+  // These always win over the live sheet below.
   pricing: {},
+  // Live model prices, kept current from the community LiteLLM sheet (US prices),
+  // cached to dataDir/prices.json and refreshed daily. Falls back to the shipped
+  // pricing.json offline. Set to null to disable and use only shipped + overrides.
+  pricingUrl:
+    'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json',
   // Display currency (data is always stored in USD; conversion is display-time).
   // default: initial dashboard currency; options: toggle choices;
   // rates: optional manual { INR: 84, EUR: 0.92 } - set it to skip live FX fetching.

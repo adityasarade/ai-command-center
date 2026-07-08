@@ -3,9 +3,10 @@ import path from 'node:path';
 import { EventEmitter } from 'node:events';
 
 /**
- * Append-only JSONL store with an in-memory copy for querying.
- * One line per request record. Zero external dependencies, safe for
- * MVP-scale volumes (hundreds of thousands of records).
+ * Append-only JSONL store with an in-memory copy for querying. One line per
+ * request record, zero external dependencies. Optional retention (prune) keeps
+ * memory and disk bounded on a long-running gateway; the interface is small
+ * enough to swap for SQLite/Postgres if a deployment outgrows a single file.
  */
 export class Store extends EventEmitter {
   constructor(dataDir) {
@@ -68,6 +69,25 @@ export class Store extends EventEmitter {
   clear({ simulatedOnly = false } = {}) {
     const kept = simulatedOnly ? this.records.filter((r) => !r.simulated) : [];
     const removed = this.records.length - kept.length;
+    this.records = kept;
+    const body = kept.map((r) => JSON.stringify(r)).join('\n') + (kept.length ? '\n' : '');
+    this._chain = this._chain.then(async () => {
+      const tmp = this.file + '.tmp';
+      await fs.promises.writeFile(tmp, body, 'utf8');
+      await fs.promises.rename(tmp, this.file);
+    });
+    return removed;
+  }
+
+  /**
+   * Drop records older than cutoffMs (epoch) and rewrite the file atomically.
+   * Powers optional retention so JSONL + in-memory storage stays bounded on a
+   * long-running gateway. Returns the number of records removed.
+   */
+  prune(cutoffMs) {
+    const kept = this.records.filter((r) => r.ts >= cutoffMs);
+    const removed = this.records.length - kept.length;
+    if (!removed) return 0;
     this.records = kept;
     const body = kept.map((r) => JSON.stringify(r)).join('\n') + (kept.length ? '\n' : '');
     this._chain = this._chain.then(async () => {

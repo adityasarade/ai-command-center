@@ -50,9 +50,22 @@ export default function Page() {
   // Point a built-in provider elsewhere (region endpoint, test double)
   "upstreams": { "openai": "http://localhost:8080" },
 
+  // Opt-in provider routing: fail over / load-balance across a same-schema pool.
+  // Reached at /r/<route>/… . strategy: "failover" (default) or "round-robin".
+  "routes": {
+    "chat": { "members": ["groq", "together", "openrouter"], "retryOn": [429, 500, 502, 503, 504] }
+  },
+
   // Extend/override pricing (USD per 1M tokens, longest-prefix match;
-  // "provider:*" sets a provider-wide default)
+  // "provider:*" sets a provider-wide default). These always win.
   "pricing": { "my-finetune": { "in": 1.0, "out": 4.0 } },
+
+  // Live prices are pulled from the LiteLLM sheet (US), cached + refreshed daily,
+  // with the shipped table as the offline fallback. Set to null to disable.
+  "pricingUrl": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+
+  // Optional retention: prune request records older than N days (null = keep all)
+  "retentionDays": null,
 
   // Display currency (data is always stored in USD; converted at display time)
   "currency": { "default": "INR", "options": ["INR", "USD", "EUR"], "rates": null },

@@ -115,28 +115,6 @@ client = OpenAI(base_url="http://localhost:4321/p/app/r/chat/v1")`}
         unchanged and does not translate between provider APIs.
       </p>
 
-      <h2>Quality evals (offline)</h2>
-      <p>
-        Score prompt versions against datasets you own, so &quot;which version is cheaper&quot;
-        becomes &quot;which version is better.&quot; A <strong>dataset</strong> is a set of{' '}
-        <code>{'{ input, expected? }'}</code> rows. A run sends each input to a target model, asks a
-        judge model to score the answer 1-5 against a rubric, and records the result - shown in the{' '}
-        <strong>Evals</strong> view and joined onto the Prompts view as an average score per
-        version. It is fully offline: it never captures live traffic, and needs a central key for
-        the target and judge providers.
-      </p>
-      <CodeBlock
-        lang="bash"
-        code={`# create a dataset and run an eval from the dashboard (Evals tab), or via the API:
-curl -X POST http://localhost:4321/api/evals/dataset -H "content-type: application/json" \\
-  -d '{"name":"triage","rows":[{"input":"card declined"},{"input":"refund status"}]}'
-
-curl -X POST http://localhost:4321/api/evals/run -H "content-type: application/json" \\
-  -d '{"dataset":"triage","prompt":"triage","promptVersion":"v3",
-       "target":{"provider":"openai","model":"gpt-4o-mini"},
-       "judge":{"provider":"openai","model":"gpt-4o"}}'`}
-      />
-
       <h2>Roles &amp; per-project grants</h2>
       <p>
         Beyond admin and member, there is a read-only <strong>viewer</strong> role. Any non-admin
@@ -149,8 +127,7 @@ curl -X POST http://localhost:4321/api/evals/run -H "content-type: application/j
 
       <div className="callout">
         None of this stores prompt or response content - only the header values you send (a trace
-        id, a prompt name/version) plus the usual metadata. Eval datasets and their scored outputs
-        are test data you create, stored under <code>dataDir/evals/</code>. See{' '}
+        id, a prompt name/version) plus the usual metadata. See{' '}
         <a href="/docs/security">Security</a>.
       </div>
 

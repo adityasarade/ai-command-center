@@ -20,17 +20,18 @@ https://github.com/adityasarade/ai-command-center.
   streamed, `failover` or `round-robin`, using each member's central key. Every
   attempt is logged (with a `route` tag surfaced in the request feed), so
   fallbacks are visible. No new dependency, no client code change.
-- **Quality evals** (offline, dependency-free): score prompt versions against
-  datasets you own. A dataset is a set of `{ input, expected? }` rows; a run
-  calls a target model then an LLM judge (1-5 rubric), records each result, and
-  reports average score per prompt version - shown in a new **Evals** dashboard
-  view and joined onto the Prompts view. No live-traffic capture; runs need a
-  central key for the target and judge providers. New endpoints under
-  `/api/evals`.
 - **Roles & per-project grants**: a read-only **viewer** role, plus explicit
   per-user project grants (`allowedProjects`) that stack on top of team-scoped
   visibility - manageable from the settings panel. (Full OIDC/SAML SSO remains
   on the roadmap.)
+- **Live model pricing**: prices are kept current from the community-maintained
+  LiteLLM price sheet (US prices), cached to `dataDir/prices.json` and refreshed
+  daily, with the shipped `pricing.json` as the offline fallback and
+  `config.pricing` overrides always winning. Set `config.pricingUrl` to null to
+  disable. No more silent price drift.
+- **Optional retention**: `config.retentionDays` prunes request records older
+  than N days (on start and daily), keeping the JSONL + in-memory store bounded
+  on a long-running gateway. Defaults to keeping everything.
 
 ## [0.1.1] - 2026-07-08
 

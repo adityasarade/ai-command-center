@@ -682,7 +682,6 @@
     if (state.view === 'prompts') return loadPrompts();
     if (state.view === 'models') return loadModels();
     if (state.view === 'alerts') return loadAlerts();
-    if (state.view === 'evals') return loadEvals();
   }
 
   async function loadOverview(seq) {
@@ -847,8 +846,7 @@
         <td class="num t-cost">${fmtMoney(p.avgCostUsd)}</td>
         <td class="num">${fmtNum(p.tokens)}</td>
         <td class="num">${fmtMs(p.p50LatencyMs)}</td>
-        <td class="num">${fmtMs(p.p95LatencyMs)}</td>
-        <td class="num">${p.avgScore != null ? `<span title="${p.scored} scored">${p.avgScore.toFixed(1)}/5</span>` : '<span class="t-dim">-</span>'}</td></tr>`,
+        <td class="num">${fmtMs(p.p95LatencyMs)}</td></tr>`,
       )
       .join('');
     renderPager('prompts', start, rows.length, total);
@@ -960,58 +958,12 @@
       : `<div class="alerts-empty">${budgets.length ? 'No budgets match your filter.' : 'No budgets set yet.'}</div>`;
   }
 
-  // ---- Evals view ----
+  // Parse a comma-separated project-grant input into a unique-name array.
   const grantsFromInput = (s) =>
     String(s || '')
       .split(',')
       .map((x) => x.trim())
       .filter(Boolean);
-
-  async function loadEvals() {
-    const isAdmin = !auth.locked || auth.user?.role === 'admin';
-    const data = await api('/api/evals');
-    const runs = data.runs || [];
-    $('evalRunsEmpty').hidden = runs.length > 0;
-    $('evalRunsBody').innerHTML = runs
-      .map(
-        (r) => `<tr>
-        <td class="t-dim">${fmtDateTime(r.ts)}</td>
-        <td>${esc(r.prompt || '-')}${r.promptVersion ? ` <span class="t-dim">${esc(r.promptVersion)}</span>` : ''}</td>
-        <td class="t-dim">${esc(r.dataset)}</td>
-        <td class="t-dim">${esc(r.target?.model || '-')} · ${esc(r.judge?.model || '-')}</td>
-        <td class="num">${r.rows}</td>
-        <td class="num">${r.avgScore != null ? r.avgScore.toFixed(2) + '/5' : '-'}</td>
-        <td class="num${r.errors ? ' err-count' : ''}">${r.errors}</td>
-        <td class="num t-cost">${fmtMoney(r.costUsd)}</td></tr>`,
-      )
-      .join('');
-
-    $('evalAdmin').hidden = !isAdmin;
-    if (!isAdmin) return;
-    const datasets = data.datasets || [];
-    $('datasetsList').innerHTML = datasets.length
-      ? datasets
-          .map(
-            (d) => `<div class="budget-row">
-          <span class="b-name">${esc(d.name)}</span>
-          <span class="b-amt">${d.rows} row${d.rows === 1 ? '' : 's'}</span>
-          <button class="b-del" data-del-dataset="${esc(d.name)}" title="delete dataset">×</button>
-        </div>`,
-          )
-          .join('')
-      : '<div class="alerts-empty">No datasets yet.</div>';
-    $('evDataset').innerHTML = datasets.length
-      ? datasets
-          .map((d) => `<option value="${esc(d.name)}">${esc(d.name)} (${d.rows})</option>`)
-          .join('')
-      : '<option value="">no datasets - add one first</option>';
-    const keyed = data.keyedProviders || [];
-    $('evKeyNote').innerHTML = keyed.length
-      ? `Providers with a central key ready: <b>${keyed.map(esc).join(', ')}</b>. Target &amp; judge must be among these.`
-      : '⚠ No central provider keys configured. Evals call models directly, so add a key in config first.';
-    $('evErr').textContent = '';
-    $('dsErr').textContent = '';
-  }
 
   function populateProjects(projects) {
     // Drop a stale filter if its project no longer has any visible records.
@@ -1145,75 +1097,6 @@
     state.alertsQ = ev.target.value.trim();
     clearTimeout(alertsSearchTimer);
     alertsSearchTimer = setTimeout(renderAlerts, 200);
-  });
-
-  // ---- evals: dataset save/delete + run ----
-  $('dsSave').addEventListener('click', async () => {
-    $('dsErr').textContent = '';
-    const name = $('dsName').value.trim();
-    const rows = [];
-    for (const line of $('dsRows').value.split('\n')) {
-      const t = line.trim();
-      if (!t) continue;
-      try {
-        rows.push(JSON.parse(t));
-      } catch {
-        $('dsErr').textContent = `not valid JSON: ${t.slice(0, 40)}`;
-        return;
-      }
-    }
-    try {
-      await apiSend('POST', '/api/evals/dataset', { name, rows });
-      $('dsName').value = '';
-      $('dsRows').value = '';
-      await loadEvals();
-    } catch (err) {
-      $('dsErr').textContent = err.message;
-    }
-  });
-  $('datasetsList').addEventListener('click', async (ev) => {
-    const btn = ev.target.closest('button[data-del-dataset]');
-    if (!btn) return;
-    if (!confirm(`Delete dataset "${btn.dataset.delDataset}"?`)) return;
-    try {
-      await apiSend('DELETE', '/api/evals/dataset/' + encodeURIComponent(btn.dataset.delDataset));
-      await loadEvals();
-    } catch (err) {
-      $('dsErr').textContent = err.message;
-    }
-  });
-  $('evRun').addEventListener('click', async () => {
-    $('evErr').textContent = '';
-    const payload = {
-      dataset: $('evDataset').value,
-      prompt: $('evPrompt').value.trim() || undefined,
-      promptVersion: $('evVersion').value.trim() || undefined,
-      promptTemplate: $('evTemplate').value.trim() || undefined,
-      target: {
-        provider: $('evTargetProvider').value.trim(),
-        model: $('evTargetModel').value.trim(),
-      },
-      judge: { provider: $('evJudgeProvider').value.trim(), model: $('evJudgeModel').value.trim() },
-      rubric: $('evRubric').value.trim() || undefined,
-    };
-    if (!payload.dataset) {
-      $('evErr').textContent = 'pick a dataset first';
-      return;
-    }
-    const btn = $('evRun');
-    btn.disabled = true;
-    btn.textContent = 'running…';
-    try {
-      const { run } = await apiSend('POST', '/api/evals/run', payload);
-      await loadEvals();
-      $('evErr').textContent =
-        `done: ${run.rows} rows, avg ${run.avgScore != null ? run.avgScore.toFixed(2) : 'n/a'}/5`;
-    } catch (err) {
-      $('evErr').textContent = err.message;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'run eval';
-    }
   });
 
   $('tracesBody').addEventListener('click', (ev) => {
