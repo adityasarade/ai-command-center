@@ -201,11 +201,93 @@ pre,
 /* ---------------------------------------------------------------- hero */
 .hero-wrap {
   position: relative;
+  overflow: clip;
   border-bottom: 1px solid var(--line);
 }
 .hero {
+  position: relative;
+  z-index: 1;
   padding: clamp(72px, 13vh, 140px) 0 clamp(56px, 9vh, 96px);
   max-width: 940px;
+}
+
+/* ---------------------------------------------------------- decoration
+   Astrolabe anchored in the hero (slowly turning), and faint constellation
+   clusters drifting down the rest of the page. Ambient, never loud. */
+.astrolabe {
+  position: absolute;
+  right: clamp(-280px, -13vw, -130px);
+  top: 50%;
+  width: min(740px, 78vw);
+  height: min(740px, 78vw);
+  transform: translateY(-50%);
+  z-index: 0;
+  opacity: 0.5;
+  color: var(--accent);
+  pointer-events: none;
+}
+.astrolabe .spin {
+  transform-origin: 50% 50%;
+  animation: aspin 150s linear infinite;
+}
+.astrolabe .spin-r {
+  transform-origin: 50% 50%;
+  animation: aspin 104s linear infinite reverse;
+}
+@keyframes aspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.deco-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: clip;
+  pointer-events: none;
+}
+.deco-cluster {
+  position: absolute;
+  color: var(--accent);
+}
+.deco-cluster.drift {
+  animation: drift 24s ease-in-out infinite alternate;
+}
+.deco-cluster.drift-b {
+  animation: drift 32s ease-in-out infinite alternate-reverse;
+}
+@keyframes drift {
+  to {
+    transform: translateY(-16px);
+  }
+}
+.deco-cluster .ln {
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: 0.22;
+}
+.deco-cluster .s {
+  fill: #d7dbd8;
+}
+.deco-cluster .s.a {
+  fill: var(--accent);
+}
+.deco-cluster .tw {
+  animation: tw 4.5s ease-in-out infinite;
+}
+.deco-cluster .tw-b {
+  animation: tw 6s ease-in-out infinite;
+  animation-delay: -2.5s;
+}
+@keyframes tw {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 /* Each hero element rises in on load, gently staggered. */
 .hero > * {

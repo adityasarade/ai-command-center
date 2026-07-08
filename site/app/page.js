@@ -109,7 +109,116 @@ const ROADMAP = [
 export default function Home() {
   return (
     <>
+      <div className="deco-layer" aria-hidden="true">
+        <svg
+          className="deco-cluster drift"
+          style={{ top: '31%', right: '3%', width: 240 }}
+          viewBox="0 0 240 190"
+          fill="none"
+        >
+          <g className="ln">
+            <line x1="20" y1="40" x2="90" y2="20" />
+            <line x1="90" y1="20" x2="150" y2="70" />
+            <line x1="150" y1="70" x2="120" y2="140" />
+            <line x1="150" y1="70" x2="220" y2="110" />
+          </g>
+          <circle className="s a tw" cx="20" cy="40" r="3" />
+          <circle className="s" cx="90" cy="20" r="2.4" />
+          <circle className="s a" cx="150" cy="70" r="3.4" />
+          <circle className="s tw-b" cx="120" cy="140" r="2.4" />
+          <circle className="s" cx="220" cy="110" r="2" />
+          <circle className="s" cx="60" cy="150" r="1.5" />
+        </svg>
+        <svg
+          className="deco-cluster drift-b"
+          style={{ top: '49%', left: '2%', width: 210 }}
+          viewBox="0 0 210 200"
+          fill="none"
+        >
+          <g className="ln">
+            <line x1="30" y1="30" x2="70" y2="110" />
+            <line x1="70" y1="110" x2="150" y2="90" />
+            <line x1="70" y1="110" x2="110" y2="180" />
+          </g>
+          <circle className="s" cx="30" cy="30" r="2.2" />
+          <circle className="s a tw-b" cx="70" cy="110" r="3.2" />
+          <circle className="s" cx="150" cy="90" r="2.4" />
+          <circle className="s tw" cx="110" cy="180" r="2" />
+          <circle className="s" cx="185" cy="40" r="1.5" />
+        </svg>
+        <svg
+          className="deco-cluster drift"
+          style={{ top: '69%', right: '5%', width: 250 }}
+          viewBox="0 0 250 200"
+          fill="none"
+        >
+          <g className="ln">
+            <line x1="40" y1="60" x2="120" y2="30" />
+            <line x1="120" y1="30" x2="200" y2="80" />
+            <line x1="120" y1="30" x2="140" y2="150" />
+            <line x1="140" y1="150" x2="60" y2="170" />
+          </g>
+          <circle className="s a" cx="40" cy="60" r="3" />
+          <circle className="s tw" cx="120" cy="30" r="2.6" />
+          <circle className="s a tw-b" cx="200" cy="80" r="3.4" />
+          <circle className="s" cx="140" cy="150" r="2.4" />
+          <circle className="s" cx="60" cy="170" r="1.8" />
+        </svg>
+        <svg
+          className="deco-cluster drift-b"
+          style={{ top: '88%', left: '4%', width: 220 }}
+          viewBox="0 0 220 180"
+          fill="none"
+        >
+          <g className="ln">
+            <line x1="30" y1="120" x2="90" y2="60" />
+            <line x1="90" y1="60" x2="170" y2="90" />
+            <line x1="90" y1="60" x2="130" y2="20" />
+          </g>
+          <circle className="s tw" cx="30" cy="120" r="2.4" />
+          <circle className="s a" cx="90" cy="60" r="3.2" />
+          <circle className="s" cx="170" cy="90" r="2.4" />
+          <circle className="s a tw-b" cx="130" cy="20" r="2.8" />
+        </svg>
+      </div>
       <div className="hero-wrap">
+        <svg className="astrolabe" viewBox="0 0 760 760" fill="none" aria-hidden="true">
+          <g stroke="currentColor" strokeWidth="1">
+            <circle cx="380" cy="380" r="372" opacity="0.35" />
+            <circle cx="380" cy="380" r="348" strokeDasharray="1 9" opacity="0.7" />
+            <circle cx="380" cy="380" r="300" opacity="0.3" />
+            <circle cx="380" cy="380" r="286" strokeDasharray="1 5" opacity="0.5" />
+            <circle cx="380" cy="380" r="200" opacity="0.45" />
+            <circle cx="380" cy="380" r="120" opacity="0.55" />
+            <circle cx="380" cy="380" r="46" opacity="0.7" />
+            <circle cx="380" cy="380" r="5" fill="currentColor" stroke="none" />
+            <g className="spin" opacity="0.55">
+              <circle cx="380" cy="250" r="150" opacity="0.6" />
+              <circle cx="380" cy="510" r="150" opacity="0.35" />
+              <line x1="380" y1="30" x2="380" y2="730" opacity="0.5" />
+              <line x1="60" y1="380" x2="700" y2="380" opacity="0.5" />
+            </g>
+            <g className="spin-r" opacity="0.5">
+              <line x1="380" y1="380" x2="620" y2="180" />
+              <line x1="380" y1="380" x2="150" y2="560" />
+              <path
+                d="M380 380 L470 240 L540 300 L470 420 Z"
+                opacity="0.5"
+                strokeLinejoin="round"
+              />
+            </g>
+            <g opacity="0.4">
+              <line x1="380" y1="380" x2="380" y2="80" />
+              <line x1="380" y1="380" x2="612" y2="380" transform="rotate(30 380 380)" />
+              <line x1="380" y1="380" x2="612" y2="380" transform="rotate(75 380 380)" />
+              <line x1="380" y1="380" x2="612" y2="380" transform="rotate(120 380 380)" />
+              <line x1="380" y1="380" x2="612" y2="380" transform="rotate(165 380 380)" />
+              <line x1="380" y1="380" x2="612" y2="380" transform="rotate(210 380 380)" />
+              <line x1="380" y1="380" x2="612" y2="380" transform="rotate(255 380 380)" />
+              <line x1="380" y1="380" x2="612" y2="380" transform="rotate(300 380 380)" />
+            </g>
+          </g>
+        </svg>
         <div className="wrap hero">
           <span className="eyebrow">
             <span className="dot" /> open source · self-hosted · zero dependencies
