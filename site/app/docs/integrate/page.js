@@ -83,7 +83,10 @@ client = genai.Client(http_options={"base_url": "http://localhost:4321/p/invoice
       />
 
       <h2>Optional thin SDKs</h2>
-      <p>They do nothing but set those env vars for you - use them or skip them.</p>
+      <p>
+        They do nothing but set those env vars for you - use them or skip them. Install with{' '}
+        <code>pip install aicc-sdk</code> or <code>npm install @ai-command-center/sdk</code>.
+      </p>
       <CodeBlock
         lang="python"
         code={`import aicc
