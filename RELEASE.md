@@ -3,10 +3,10 @@
 ## ✅ Shipped
 
 - **Gateway on npm**: [`ai-command-center`](https://www.npmjs.com/package/ai-command-center),
-  latest `0.1.1` (public, MIT, zero runtime deps). Install-free run:
+  latest `0.2.0` (public, MIT, zero runtime deps). Install-free run:
 
   ```bash
-  npx ai-command-center@latest --version   # 0.1.1
+  npx ai-command-center@latest --version   # 0.2.0
   ```
 
 - **Thin SDKs published**:
@@ -21,21 +21,8 @@
 - **Tagged with GitHub Releases**:
   - [`v0.1.0`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.1.0) - first public release.
   - [`v0.1.1`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.1.1) - dashboard search & pagination.
+  - [`v0.2.0`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.2.0) - provider routing, roles & grants, live pricing.
 - **Verified**: 73 tests pass on Node 18/20/22, CI is green, evals pass.
-
-## ⏳ Ready to publish: 0.2.0
-
-`packages/gateway` is bumped to `0.2.0` - provider routing (failover +
-load-balancing), a read-only viewer role with per-project grants, and pricing
-that stays current from the LiteLLM price sheet. Committed, CI-green, and
-verified live in the dashboard (routing `via` tag). The npm upload needs your OTP:
-
-```bash
-cd packages/gateway
-npm publish --access public       # publishes ai-command-center@0.2.0, asks for OTP
-cd ../.. && git tag v0.2.0 && git push origin v0.2.0
-gh release create v0.2.0 --notes-file <notes>   # optional, from the CHANGELOG entry
-```
 
 ## Cutting the next version
 
