@@ -119,6 +119,16 @@ bar.style.cssText =
   'color:#0b0b0c;background:#63bfa2;';
 document.body.prepend(bar);
 
+// On the hosted demo, the brand title links back to the marketing home.
+const brand = document.querySelector('.brand');
+if (brand) {
+  brand.style.cursor = 'pointer';
+  brand.title = 'Back to the AI Command Center home page';
+  brand.addEventListener('click', () => {
+    window.location.href = '/';
+  });
+}
+
 // Fetch is mocked and Chart is loaded - now start the real dashboard.
 const s = document.createElement('script');
 s.src = 'app.js';
