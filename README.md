@@ -117,6 +117,11 @@ Print the exact snippets for your own project with
 (LangChain, Spring AI, curl, and more):
 **[docs/integrate](https://aicommandcenter.vercel.app/docs/integrate)**.
 
+Prefer a helper to setting the base URL yourself? Install the optional thin SDK -
+`pip install aicc-sdk` (Python) or `npm install @ai-command-center/sdk` (JS) - and
+call `aicc.init(project="my-app")` before you construct any client. Both only set
+the standard base-URL environment variables; nothing else changes.
+
 Can't route through the proxy (a batch job, an unsupported provider)? Report
 usage directly and it is priced and shown the same way:
 

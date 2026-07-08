@@ -19,10 +19,10 @@
     <text x="120" y="210" class="m" text-anchor="middle">base_url →</text>
   </g>
 
-  <line x1="212" y1="150" x2="356" y2="150" stroke="#6e7681" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="214" y1="150" x2="321" y2="150" stroke="#6e7681" stroke-width="1.6" marker-end="url(#arr)"/>
 
   <!-- gateway -->
-  <rect x="360" y="55" width="270" height="190" rx="10" fill="#16181d" stroke="rgba(57,135,229,.5)"/>
+  <rect x="325" y="55" width="340" height="190" rx="10" fill="#16181d" stroke="rgba(57,135,229,.5)"/>
   <path d="M495 78 L512 92 L495 106 L478 92Z" fill="none" stroke="#3987e5" stroke-width="2"/><circle cx="495" cy="92" r="3" fill="#0ca30c"/>
   <text x="495" y="128" class="h" text-anchor="middle">AI Command Center</text>
   <text x="495" y="146" class="s" text-anchor="middle">transparent gateway :4321</text>
@@ -33,7 +33,7 @@
     <text x="495" y="228" class="s">no prompt/response bodies stored</text>
   </g>
 
-  <line x1="632" y1="150" x2="776" y2="150" stroke="#6e7681" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="669" y1="150" x2="776" y2="150" stroke="#6e7681" stroke-width="1.6" marker-end="url(#arr)"/>
 
   <!-- providers -->
   <rect x="780" y="70" width="190" height="160" rx="10" fill="#16181d" stroke="rgba(255,255,255,.1)"/>
