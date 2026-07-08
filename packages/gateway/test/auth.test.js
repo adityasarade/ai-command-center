@@ -195,6 +195,51 @@ test('untrusted cross-origin write is blocked; same-origin/no-origin allowed', a
   assert.equal(evilProxy.status, 403);
 });
 
+test('viewer role + per-project grant: visibility without a team, read-only', async () => {
+  const admin = makeClient();
+  await admin('POST', '/api/auth/login', { username: 'aditya', password: 'supersecret' });
+  const created = await (
+    await admin('POST', '/api/admin/users', {
+      username: 'auditor',
+      password: 'viewerpass1',
+      role: 'viewer',
+      allowedProjects: ['billing-svc'],
+    })
+  ).json();
+  assert.equal(created.user.role, 'viewer');
+  assert.deepEqual(created.user.allowedProjects, ['billing-svc']);
+
+  const viewer = makeClient();
+  await viewer('POST', '/api/auth/login', { username: 'auditor', password: 'viewerpass1' });
+  const names = (await (await viewer('GET', '/api/projects')).json()).map((p) => p.project);
+  assert.ok(names.includes('billing-svc'), 'granted project is visible');
+  assert.ok(!names.includes('batch-svc'), 'non-granted project stays hidden');
+  // read-only: no admin routes, no data mutation
+  assert.equal((await viewer('GET', '/api/admin/overview')).status, 403);
+  assert.equal((await viewer('DELETE', '/api/records')).status, 403);
+});
+
+test('per-project grants stack on top of team visibility', async () => {
+  const admin = makeClient();
+  await admin('POST', '/api/auth/login', { username: 'aditya', password: 'supersecret' });
+  const users = (await (await admin('GET', '/api/admin/overview')).json()).users;
+  const rahul = users.find((u) => u.username === 'rahul');
+  await admin('PATCH', `/api/admin/users/${rahul.id}`, { allowedProjects: ['batch-svc'] });
+  const member = makeClient();
+  await member('POST', '/api/auth/login', { username: 'rahul', password: 'memberpass1' });
+  const names = (await (await member('GET', '/api/projects')).json()).map((p) => p.project);
+  assert.ok(names.includes('billing-svc'), 'still sees team project');
+  assert.ok(names.includes('batch-svc'), 'now also sees the granted project');
+});
+
+test('last admin cannot be demoted to viewer', async () => {
+  const admin = makeClient();
+  await admin('POST', '/api/auth/login', { username: 'aditya', password: 'supersecret' });
+  const me = (await (await admin('GET', '/api/auth/state')).json()).user;
+  const res = await admin('PATCH', `/api/admin/users/${me.id}`, { role: 'viewer' });
+  assert.equal(res.status, 400);
+});
+
 test('login rejects wrong password; last admin cannot be deleted', async () => {
   assert.equal(
     (

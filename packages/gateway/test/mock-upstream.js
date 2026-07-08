@@ -5,8 +5,10 @@ import http from 'node:http';
  * closely enough to exercise the gateway's proxying and usage parsing.
  * Records the last request (headers/body/path) for assertions.
  */
-export function startMockUpstream() {
-  const state = { last: null };
+export function startMockUpstream(opts = {}) {
+  // failStatus: always answer with this status (fault injection for routing tests).
+  const { failStatus = null } = opts;
+  const state = { last: null, count: 0 };
 
   const server = http.createServer(async (req, res) => {
     const chunks = [];
@@ -19,7 +21,14 @@ export function startMockUpstream() {
       /* keep raw */
     }
     const url = new URL(req.url, 'http://mock');
+    state.count += 1;
     state.last = { path: url.pathname, search: url.search, headers: req.headers, body, raw };
+
+    // ---- always-fail mode (a member that should be failed over) ----
+    if (failStatus) {
+      res.writeHead(failStatus, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ error: { message: `mock upstream returns ${failStatus}` } }));
+    }
 
     // ---- forced failure ----
     if (body?.model === 'fail-me' || url.pathname.includes('fail500')) {
@@ -32,6 +41,20 @@ export function startMockUpstream() {
     // ---- OpenAI chat completions ----
     if (url.pathname === '/v1/chat/completions') {
       const model = body?.model || 'gpt-test';
+      // JSON mode (used by the eval judge): return a parseable score object.
+      if (body?.response_format?.type === 'json_object') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end(
+          JSON.stringify({
+            id: 'j1',
+            model,
+            choices: [
+              { message: { role: 'assistant', content: '{"score": 4, "reason": "clear answer"}' } },
+            ],
+            usage: { prompt_tokens: 40, completion_tokens: 12 },
+          }),
+        );
+      }
       if (body?.stream) {
         res.writeHead(200, { 'content-type': 'text/event-stream' });
         const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);

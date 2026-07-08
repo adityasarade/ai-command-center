@@ -65,12 +65,14 @@ actually need, from one command, on your own machine, with nothing to operate.
 - It is just an HTTP gateway, so every language works the same way: Python, JS, Java, Go, Rust, shell.
 - Every major provider is covered: OpenAI, Anthropic, Gemini, OpenRouter, Mistral, DeepSeek, xAI, Groq, Together, Ollama, and any OpenAI-compatible endpoint.
 - Cost is exact, not estimated: per-request USD from real token counts (cached tokens included), shown in rupees, dollars, or euros at live rates.
-- Five dashboard views, not just a spend meter: cost and usage, traces and sessions, prompt versions, model comparison, and budgets with anomaly alerts.
+- More than a spend meter: cost and usage, traces and sessions, prompt versions, model comparison, budgets with anomaly alerts, and offline quality evals.
+- Opt-in provider routing: failover and load-balancing across a pool of providers, in the gateway you already run - no client change, no new dependency.
 - Your keys and data stay put: provider keys pass straight through, prompt and response bodies are never stored (metadata only), and telemetry never leaves your machine.
-- Team-ready when you need it: optional login, teams, and per-project gateway keys, so people see only their own team's projects.
+- Team-ready when you need it: optional login, teams, per-project gateway keys, a read-only viewer role, and per-user project grants.
 
 Traces and prompt metrics come from two optional headers (`x-aicc-trace`,
-`x-aicc-prompt`); budgets and anomaly alerts are computed for you. See
+`x-aicc-prompt`); budgets, anomaly alerts and evals are computed for you;
+provider routing is a few lines of config. See
 [docs/features](https://aicommandcenter.vercel.app/docs/features).
 
 ## Integrate (any language)

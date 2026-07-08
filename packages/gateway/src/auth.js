@@ -43,6 +43,7 @@ export class AuthService {
     this.db.users ??= [];
     this.db.teams ??= [];
     this.db.projects ??= [];
+    for (const u of this.db.users) u.allowedProjects ??= []; // migrate older auth.json
   }
 
   _persist() {
@@ -67,7 +68,7 @@ export class AuthService {
     return buf.toString('hex');
   }
 
-  async createUser({ username, password, role = 'member', teamId = null }) {
+  async createUser({ username, password, role = 'member', teamId = null, allowedProjects }) {
     username = String(username || '')
       .trim()
       .toLowerCase();
@@ -78,7 +79,7 @@ export class AuthService {
       throw httpError(400, 'password must be at least 8 characters');
     if (this.db.users.some((u) => u.username === username))
       throw httpError(409, 'username already exists');
-    if (role !== 'admin' && role !== 'member') throw httpError(400, 'role must be admin or member');
+    if (!ROLES.has(role)) throw httpError(400, 'role must be admin, member, or viewer');
     if (teamId && !this.db.teams.some((t) => t.id === teamId)) throw httpError(400, 'unknown team');
     const salt = crypto.randomBytes(16).toString('hex');
     const user = {
@@ -88,6 +89,7 @@ export class AuthService {
       passwordHash: await AuthService.hashPassword(password, salt),
       role,
       teamId: teamId || null,
+      allowedProjects: normalizeGrants(allowedProjects),
       createdAt: Date.now(),
     };
     this.db.users.push(user);
@@ -95,13 +97,13 @@ export class AuthService {
     return this.publicUser(user);
   }
 
-  async updateUser(id, { role, teamId, password }) {
+  async updateUser(id, { role, teamId, password, allowedProjects }) {
     const user = this.db.users.find((u) => u.id === id);
     if (!user) throw httpError(404, 'no such user');
     if (role) {
-      if (role !== 'admin' && role !== 'member')
-        throw httpError(400, 'role must be admin or member');
-      if (user.role === 'admin' && role === 'member' && this.adminCount() === 1) {
+      if (!ROLES.has(role)) throw httpError(400, 'role must be admin, member, or viewer');
+      // Demoting the last admin (to member OR viewer) would lock everyone out.
+      if (user.role === 'admin' && role !== 'admin' && this.adminCount() === 1) {
         throw httpError(400, 'cannot demote the last admin');
       }
       user.role = role;
@@ -110,6 +112,9 @@ export class AuthService {
       if (teamId && !this.db.teams.some((t) => t.id === teamId))
         throw httpError(400, 'unknown team');
       user.teamId = teamId || null;
+    }
+    if (allowedProjects !== undefined) {
+      user.allowedProjects = normalizeGrants(allowedProjects);
     }
     if (password) {
       if (String(password).length < 8)
@@ -158,6 +163,7 @@ export class AuthService {
       role: user.role,
       teamId: user.teamId,
       teamName: team?.name ?? null,
+      allowedProjects: user.allowedProjects || [],
       createdAt: user.createdAt,
     };
   }
@@ -288,17 +294,34 @@ export class AuthService {
 
   /**
    * Which project names a user may see. `null` means "all" (admins, or auth
-   * not locked). Members see projects assigned to their team; unassigned
-   * projects stay admin-only.
+   * not locked). Non-admins see the union of their team's projects and any
+   * projects explicitly granted to them (user.allowedProjects). Viewers use
+   * the same visibility but can never mutate (all writes are admin-gated).
    */
   allowedProjects(user) {
     if (!this.locked) return null;
     if (!user) return new Set();
     if (user.role === 'admin') return null;
-    return new Set(
-      this.db.projects.filter((p) => p.teamId && p.teamId === user.teamId).map((p) => p.name),
-    );
+    const set = new Set();
+    for (const p of this.db.projects) {
+      if (p.teamId && p.teamId === user.teamId) set.add(p.name);
+    }
+    for (const name of user.allowedProjects || []) set.add(name);
+    return set;
   }
+}
+
+const ROLES = new Set(['admin', 'member', 'viewer']);
+
+/** Normalize a per-user project grant list to unique, trimmed strings. */
+function normalizeGrants(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const raw of list) {
+    const name = String(raw || '').trim();
+    if (name && !out.includes(name)) out.push(name);
+  }
+  return out;
 }
 
 export function httpError(status, message) {

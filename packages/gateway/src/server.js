@@ -3,11 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { buildProviderTable, parseProxyPath } from './providers.js';
+import { buildProviderTable, buildRoutes, parseProxyPath, centralKey } from './providers.js';
 import { PricingEngine } from './pricing.js';
 import { Store } from './store.js';
 import { FxService } from './fx.js';
 import { AuthService } from './auth.js';
+import { Evals, runEval } from './evals.js';
 import { corsHeaders, originAllowed, untrustedCrossOrigin } from './cors.js';
 import {
   computeStats,
@@ -39,13 +40,16 @@ const MIME = {
 
 export function createGateway(config) {
   const table = buildProviderTable(config);
+  const { routes, warnings } = buildRoutes(config, table);
+  for (const w of warnings) console.warn(`[aicc] ${w}`);
   const pricing = new PricingEngine(config.pricing);
   const store = new Store(config.dataDir).init();
   const fx = new FxService(config.dataDir, config.currency);
   fx.init().catch(() => {}); // non-blocking; get() falls back gracefully meanwhile
   const auth = new AuthService(config.dataDir, { disabled: config.auth === false });
   const budgets = new Budgets(config.dataDir);
-  const proxy = createProxyHandler({ table, config, pricing, store });
+  const evals = new Evals(config.dataDir);
+  const proxy = createProxyHandler({ table, routes, config, pricing, store });
   const sseClients = new Set();
   const startedAt = Date.now();
 
@@ -175,6 +179,12 @@ export function createGateway(config) {
             providers: Object.fromEntries(
               Object.entries(table).map(([id, p]) => [id, { kind: p.kind, upstream: p.upstream }]),
             ),
+            routes: Object.fromEntries(
+              Object.entries(routes).map(([name, r]) => [
+                name,
+                { members: r.members.map((m) => m.id), strategy: r.strategy },
+              ]),
+            ),
             records: visible.length,
           });
         }
@@ -203,7 +213,17 @@ export function createGateway(config) {
           return respondJson(res, 200, getTrace(visible, id));
         }
         if (pathname === '/api/prompts') {
-          return respondJson(res, 200, listPrompts(visible, queryObj(url)));
+          const out = listPrompts(visible, queryObj(url));
+          // Join in average eval scores per prompt+version, when an eval run exists.
+          const scores = evals.scoreByPrompt();
+          for (const p of out.items) {
+            const s = scores[p.prompt + '␟' + (p.version || '-')];
+            if (s) {
+              p.avgScore = s.avgScore;
+              p.scored = s.scored;
+            }
+          }
+          return respondJson(res, 200, out);
         }
         if (pathname === '/api/models') {
           return respondJson(res, 200, modelComparison(visible, queryObj(url)));
@@ -284,6 +304,37 @@ export function createGateway(config) {
           await store.flush();
           return respondJson(res, 200, { removed });
         }
+        // ---- evals (offline quality scoring) ----
+        if (pathname === '/api/evals' && req.method === 'GET') {
+          return respondJson(res, 200, {
+            datasets: evals.listDatasets(),
+            runs: evals.runs(),
+            keyedProviders: Object.keys(table).filter((id) => centralKey(table[id], config)),
+          });
+        }
+        if (pathname === '/api/evals/run' && req.method === 'GET') {
+          const id = url.searchParams.get('id');
+          return respondJson(res, 200, { rows: id ? evals.runRows(id) : [] });
+        }
+        if (pathname.startsWith('/api/evals/')) {
+          if (!isAdmin) return respondJson(res, 403, { error: { message: 'admin only' } });
+          const seg = pathname.slice('/api/evals/'.length).split('/').map(decodeURIComponent);
+          if (seg[0] === 'dataset' && req.method === 'POST' && seg.length === 1) {
+            const body = await jsonBody(req);
+            return respondJson(res, 200, { dataset: evals.saveDataset(body.name, body.rows) });
+          }
+          if (seg[0] === 'dataset' && req.method === 'DELETE' && seg.length === 2) {
+            evals.deleteDataset(seg[1]);
+            return respondJson(res, 200, { ok: true });
+          }
+          if (seg[0] === 'run' && req.method === 'POST' && seg.length === 1) {
+            const body = await jsonBody(req);
+            const summary = await runEval(evals, { config, table, pricing }, body);
+            return respondJson(res, 200, { run: summary });
+          }
+          return respondJson(res, 404, { error: { message: 'no such evals route' } });
+        }
+
         if (pathname.startsWith('/api/admin/')) {
           if (!isAdmin) return respondJson(res, 403, { error: { message: 'admin only' } });
           return await handleAdminRoutes(req, res, pathname, { auth, store, budgets });
@@ -292,7 +343,7 @@ export function createGateway(config) {
       }
 
       // ---- LLM proxy ----
-      const route = parseProxyPath(pathname, table);
+      const route = parseProxyPath(pathname, table, routes);
       if (route) {
         // Block untrusted cross-origin browser calls (covers GET too) so a
         // malicious page can't spend the operator's keys via the proxy.
@@ -348,7 +399,7 @@ export function createGateway(config) {
     if (alertTimer) clearInterval(alertTimer);
   });
 
-  return { server, store, table, pricing, fx, auth, budgets, config, sseClients };
+  return { server, store, table, routes, pricing, fx, auth, budgets, evals, config, sseClients };
 }
 
 function alertKey(a) {

@@ -341,6 +341,37 @@ input[type='search']:focus {
   font-size: 12px;
   padding: 7px 9px;
 }
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  outline: none;
+}
+.admin-form input:focus,
+.admin-form select:focus,
+.admin-form textarea:focus {
+  border-color: var(--accent);
+}
+.admin-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+/* vertical stack for the dataset + run-eval forms */
+.eval-form {
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 12px;
+}
+.eval-form .admin-form {
+  width: 100%;
+}
 .mini {
   appearance: none;
   border: 1px solid var(--hairline-strong);

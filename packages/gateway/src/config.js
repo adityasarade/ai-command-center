@@ -31,6 +31,10 @@ const DEFAULTS = {
   // Custom OpenAI-compatible providers:
   // e.g. { "my-azure": { "upstream": "https://x.openai.azure.com", "kind": "openai", "authHeader": "api-key" } }
   providers: {},
+  // Opt-in provider routing: virtual routes that fail over / load-balance across
+  // an ordered pool of (same-schema) providers. Reached at /r/<route>/… .
+  // e.g. { "chat": { "members": ["groq","together","openrouter"], "strategy": "failover", "retryOn": [429,500,502,503,504] } }
+  routes: {},
   // Override the upstream base URL of a built-in provider (testing, Azure, region endpoints):
   // e.g. { "openai": "http://localhost:9999" }
   upstreams: {},

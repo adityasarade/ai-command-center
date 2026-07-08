@@ -5,6 +5,7 @@ import { SseParser, extractFromJson, makeStreamAccumulator, modelFromRequest } f
 const MAX_REQUEST_BODY = 50 * 1024 * 1024;
 const MAX_PARSE_BUFFER = 20 * 1024 * 1024; // JSON bodies larger than this are piped but not parsed
 const UPSTREAM_TIMEOUT_MS = 10 * 60 * 1000;
+const EMPTY_SET = new Set();
 
 // Hop-by-hop / recomputed headers never forwarded upstream.
 const STRIP_REQUEST_HEADERS = new Set([
@@ -35,18 +36,44 @@ const STRIP_RESPONSE_HEADERS = new Set([
   'vary',
 ]);
 
-export function createProxyHandler({ table, config, pricing, store }) {
+export function createProxyHandler({ table, routes = {}, config, pricing, store }) {
+  // Round-robin cursor per route (in-memory; resets on restart, fine single-process).
+  const rrCursor = new Map();
+
+  function orderedMembers(routeName) {
+    const rt = routes[routeName];
+    if (rt.strategy === 'round-robin' && rt.members.length > 1) {
+      const start = (rrCursor.get(routeName) || 0) % rt.members.length;
+      rrCursor.set(routeName, (start + 1) % rt.members.length);
+      return rt.members.slice(start).concat(rt.members.slice(0, start));
+    }
+    return rt.members;
+  }
+
   return async function handleProxy(req, res, route, url) {
-    const provider = table[route.providerId];
+    // A virtual route fans out across an ordered pool; a direct provider is a
+    // pool of one with no fallback. Routes use per-member central keys because
+    // one caller key can't authenticate against every provider in the pool.
+    let members, retryOn, viaRoute, forceCentral;
+    if (route.routeName) {
+      members = orderedMembers(route.routeName);
+      retryOn = routes[route.routeName].retryOn;
+      viaRoute = route.routeName;
+      forceCentral = true;
+    } else {
+      members = [table[route.providerId]];
+      retryOn = EMPTY_SET;
+      viaRoute = null;
+      forceCentral = false;
+    }
+
     const project = route.project || headerValue(req, 'x-aicc-project') || 'default';
     // Optional grouping metadata from x-aicc-* headers (stripped before upstream).
     const trace = clip(headerValue(req, 'x-aicc-trace') || headerValue(req, 'x-aicc-session'), 80);
     const prompt = clip(headerValue(req, 'x-aicc-prompt'), 120);
     const promptVersion = clip(headerValue(req, 'x-aicc-prompt-version'), 40);
-    const startedAt = Date.now();
-    const t0 = performance.now();
 
-    // ---- read request body -------------------------------------------------
+    // ---- read request body once (reused across fallback attempts) ---------
     let bodyBuffer;
     try {
       bodyBuffer = await readBody(req, MAX_REQUEST_BODY);
@@ -64,17 +91,19 @@ export function createProxyHandler({ table, config, pricing, store }) {
       }
     }
 
+    const primaryKind = members[0].kind;
     const isStreamRequest =
       requestJson?.stream === true ||
-      (provider.kind === 'gemini' && route.rest.includes(':streamGenerateContent'));
+      (primaryKind === 'gemini' && route.rest.includes(':streamGenerateContent'));
 
     // Ensure streaming chat completions report usage in the final chunk.
     // We inject stream_options ourselves, so we must also strip the resulting
-    // usage-only chunk from what the client sees (it never opted in).
+    // usage-only chunk from what the client sees (it never opted in). Only done
+    // when every member is an openai-kind provider that supports it.
     let injectedStreamUsage = false;
     if (
-      provider.kind === 'openai' &&
-      provider.streamUsageInject &&
+      primaryKind === 'openai' &&
+      members.every((m) => m.kind === 'openai' && m.streamUsageInject) &&
       requestJson?.stream === true &&
       requestJson.stream_options == null &&
       route.rest.includes('/chat/completions')
@@ -84,50 +113,22 @@ export function createProxyHandler({ table, config, pricing, store }) {
       injectedStreamUsage = true;
     }
 
-    // ---- build upstream request --------------------------------------------
-    const upstreamUrl = provider.upstream + route.rest + url.search;
-    const headers = {};
-    for (const [name, value] of Object.entries(req.headers)) {
-      if (STRIP_REQUEST_HEADERS.has(name) || name.startsWith('x-aicc-')) continue;
-      headers[name] = value;
-    }
-    headers['accept-encoding'] = 'identity';
-
-    const hasCallerKey =
-      headers[provider.authHeader] ||
-      headers['authorization'] ||
-      headers['x-api-key'] ||
-      headers['x-goog-api-key'] ||
-      url.searchParams.has('key');
-    // Only inject a central/operator key for trusted callers. Untrusted
-    // cross-origin browser requests are already rejected before reaching here,
-    // so this is defense-in-depth against the confused-deputy attack.
-    if (!hasCallerKey && !route.untrustedOrigin) {
-      const key = centralKey(provider, config);
-      if (key) headers[provider.authHeader] = (provider.authPrefix || '') + key;
-    }
-    if (provider.kind === 'anthropic' && !headers['anthropic-version']) {
-      headers['anthropic-version'] = '2023-06-01';
-    }
-
+    // Shared abort + client-teardown across every attempt.
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(new Error('upstream timeout')),
-      UPSTREAM_TIMEOUT_MS,
-    );
-    let clientClosed = false;
+    const clientState = { closed: false };
     res.on('close', () => {
       if (!res.writableEnded) {
-        clientClosed = true;
+        clientState.closed = true;
         controller.abort(new Error('client disconnected'));
       }
     });
 
-    const base = {
+    const makeBase = (provider) => ({
       id: 'req_' + crypto.randomUUID().replaceAll('-', '').slice(0, 20),
-      ts: startedAt,
+      ts: Date.now(),
       project,
       provider: provider.id,
+      route: viaRoute,
       model: modelFromRequest(provider.kind, requestJson, route.rest),
       endpoint: route.rest,
       method: req.method,
@@ -135,168 +136,291 @@ export function createProxyHandler({ table, config, pricing, store }) {
       trace: trace || null,
       prompt: prompt || null,
       promptVersion: promptVersion || null,
+    });
+
+    const buildHeaders = (provider) => {
+      const headers = {};
+      for (const [name, value] of Object.entries(req.headers)) {
+        if (STRIP_REQUEST_HEADERS.has(name) || name.startsWith('x-aicc-')) continue;
+        headers[name] = value;
+      }
+      headers['accept-encoding'] = 'identity';
+
+      const hasCallerKey =
+        headers[provider.authHeader] ||
+        headers['authorization'] ||
+        headers['x-api-key'] ||
+        headers['x-goog-api-key'] ||
+        url.searchParams.has('key');
+
+      if (forceCentral) {
+        // Prefer this member's central key; a single caller key can't work
+        // across a mixed pool. Clear other providers' auth header shapes first.
+        const key = centralKey(provider, config);
+        if (key) {
+          delete headers['authorization'];
+          delete headers['x-api-key'];
+          delete headers['x-goog-api-key'];
+          headers[provider.authHeader] = (provider.authPrefix || '') + key;
+        }
+      } else if (!hasCallerKey && !route.untrustedOrigin) {
+        // Only inject a central/operator key for trusted callers. Untrusted
+        // cross-origin browser requests are rejected before reaching here, so
+        // this is defense-in-depth against the confused-deputy attack.
+        const key = centralKey(provider, config);
+        if (key) headers[provider.authHeader] = (provider.authPrefix || '') + key;
+      }
+      if (provider.kind === 'anthropic' && !headers['anthropic-version']) {
+        headers['anthropic-version'] = '2023-06-01';
+      }
+      return headers;
     };
 
-    // ---- call upstream -----------------------------------------------------
-    let upstream;
-    try {
-      upstream = await fetch(upstreamUrl, {
-        method: req.method,
-        headers,
-        body: bodyBuffer.length ? bodyBuffer : undefined,
-        signal: controller.signal,
-        redirect: 'manual',
-      });
-    } catch (err) {
-      clearTimeout(timeout);
-      const message = clientClosed ? 'client disconnected' : `upstream unreachable: ${err.message}`;
-      finishRecord({
-        base,
-        status: 0,
-        ok: false,
-        ttfbMs: null,
-        latencyMs: Math.round(performance.now() - t0),
-        usage: null,
-        respModel: null,
-        errorType: clientClosed ? 'client_abort' : 'network',
-        errorMessage: message,
+    for (let i = 0; i < members.length; i++) {
+      const provider = members[i];
+      const isLast = i === members.length - 1;
+      const base = makeBase(provider);
+      const headers = buildHeaders(provider);
+      const upstreamUrl = provider.upstream + route.rest + url.search;
+      const t0 = performance.now();
+      const timeout = setTimeout(
+        () => controller.abort(new Error('upstream timeout')),
+        UPSTREAM_TIMEOUT_MS,
+      );
+
+      // ---- call upstream ----------------------------------------------------
+      let upstream;
+      try {
+        upstream = await fetch(upstreamUrl, {
+          method: req.method,
+          headers,
+          body: bodyBuffer.length ? bodyBuffer : undefined,
+          signal: controller.signal,
+          redirect: 'manual',
+        });
+      } catch (err) {
+        clearTimeout(timeout);
+        const latencyMs = Math.round(performance.now() - t0);
+        if (clientState.closed) {
+          finishRecord({
+            base,
+            status: 0,
+            ok: false,
+            ttfbMs: null,
+            latencyMs,
+            usage: null,
+            respModel: null,
+            errorType: 'client_abort',
+            errorMessage: 'client disconnected',
+            provider,
+            pricing,
+            store,
+          });
+          res.destroy();
+          return;
+        }
+        finishRecord({
+          base,
+          status: 0,
+          ok: false,
+          ttfbMs: null,
+          latencyMs,
+          usage: null,
+          respModel: null,
+          errorType: 'network',
+          errorMessage: `upstream unreachable: ${err.message}`,
+          provider,
+          pricing,
+          store,
+        });
+        if (!isLast) continue; // fall over to the next member in the pool
+        if (!res.headersSent) {
+          respondJson(res, 502, {
+            error: {
+              message: `AI Command Center gateway could not reach ${provider.id} (${upstreamUrl}): ${err.message}`,
+            },
+          });
+        } else {
+          res.destroy();
+        }
+        return;
+      }
+
+      // ---- fallback: retryable status with members left → log & move on -----
+      if (!isLast && retryOn.has(upstream.status)) {
+        clearTimeout(timeout);
+        let errText = '';
+        try {
+          errText = await upstream.text();
+        } catch {
+          /* ignore - we're discarding this attempt anyway */
+        }
+        finishRecord({
+          base,
+          status: upstream.status,
+          ok: false,
+          ttfbMs: null,
+          latencyMs: Math.round(performance.now() - t0),
+          usage: null,
+          respModel: null,
+          errorType: 'route_fallback',
+          errorMessage: extractErrorMessage(errText) || `HTTP ${upstream.status} (fell over)`,
+          provider,
+          pricing,
+          store,
+        });
+        continue;
+      }
+
+      // ---- serve this response (stream back while tee-parsing) --------------
+      await serveResponse({
+        res,
+        upstream,
         provider,
+        base,
+        t0,
+        timeout,
+        injectedStreamUsage,
+        clientState,
         pricing,
         store,
       });
-      if (!clientClosed && !res.headersSent) {
-        respondJson(res, 502, {
-          error: {
-            message: `AI Command Center gateway could not reach ${provider.id} (${upstreamUrl}): ${err.message}`,
-          },
-        });
-      } else {
-        res.destroy();
-      }
       return;
     }
+  };
+}
 
-    // ---- stream response back while tee-parsing ------------------------------
-    const respHeaders = {};
-    for (const [name, value] of upstream.headers.entries()) {
-      if (!STRIP_RESPONSE_HEADERS.has(name)) respHeaders[name] = value;
+async function serveResponse({
+  res,
+  upstream,
+  provider,
+  base,
+  t0,
+  timeout,
+  injectedStreamUsage,
+  clientState,
+  pricing,
+  store,
+}) {
+  const respHeaders = {};
+  for (const [name, value] of upstream.headers.entries()) {
+    if (!STRIP_RESPONSE_HEADERS.has(name)) respHeaders[name] = value;
+  }
+  // CORS was already applied to `res` by the server (per-origin); don't override.
+  res.writeHead(upstream.status, respHeaders);
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+  const respContentType = upstream.headers.get('content-type') || '';
+  const isSse = respContentType.includes('text/event-stream');
+  const isJson = respContentType.includes('json');
+  // When WE injected stream_options, filter the usage-only chunk back out so
+  // the proxy stays transparent for clients that never opted in.
+  const filterInjected = injectedStreamUsage && isSse;
+
+  const acc = makeStreamAccumulator(provider.kind);
+  const sse = isSse && !filterInjected ? new SseParser((obj) => acc.feed(obj)) : null;
+  const relay = filterInjected ? makeInjectedUsageRelay((obj) => acc.feed(obj)) : null;
+  const decoder = new TextDecoder('utf8');
+  let jsonText = '';
+  let parseOverflow = false;
+  let ttfbMs = null;
+  let aborted = false;
+
+  // Resolves on drain OR client teardown, so a mid-stream abort under
+  // backpressure never hangs the handler forever.
+  const writeChunk = async (data) => {
+    if (data == null || data.length === 0) return true;
+    if (res.destroyed) return false;
+    if (!res.write(data)) {
+      await new Promise((resolve) => {
+        const done = () => {
+          res.off('drain', done);
+          res.off('close', done);
+          resolve();
+        };
+        res.once('drain', done);
+        res.once('close', done);
+      });
     }
-    // CORS was already applied to `res` by the server (per-origin); don't override.
-    res.writeHead(upstream.status, respHeaders);
-    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    return !res.destroyed && !clientState.closed;
+  };
 
-    const respContentType = upstream.headers.get('content-type') || '';
-    const isSse = respContentType.includes('text/event-stream');
-    const isJson = respContentType.includes('json');
-    // When WE injected stream_options, filter the usage-only chunk back out so
-    // the proxy stays transparent for clients that never opted in.
-    const filterInjected = injectedStreamUsage && isSse;
-
-    const acc = makeStreamAccumulator(provider.kind);
-    const sse = isSse && !filterInjected ? new SseParser((obj) => acc.feed(obj)) : null;
-    const relay = filterInjected ? makeInjectedUsageRelay((obj) => acc.feed(obj)) : null;
-    const decoder = new TextDecoder('utf8');
-    let jsonText = '';
-    let parseOverflow = false;
-    let ttfbMs = null;
-    let aborted = false;
-
-    // Resolves on drain OR client teardown, so a mid-stream abort under
-    // backpressure never hangs the handler forever.
-    const writeChunk = async (data) => {
-      if (data == null || data.length === 0) return true;
-      if (res.destroyed) return false;
-      if (!res.write(data)) {
-        await new Promise((resolve) => {
-          const done = () => {
-            res.off('drain', done);
-            res.off('close', done);
-            resolve();
-          };
-          res.once('drain', done);
-          res.once('close', done);
-        });
-      }
-      return !res.destroyed && !clientClosed;
-    };
-
-    try {
-      if (upstream.body) {
-        for await (const chunk of upstream.body) {
-          if (ttfbMs === null) ttfbMs = Math.round(performance.now() - t0);
-          timeout.refresh(); // treat the cap as an idle timeout, not total-duration
-          if (relay) {
-            const forward = relay.feed(decoder.decode(chunk, { stream: true }));
-            if (!(await writeChunk(forward))) break;
-          } else {
-            if (!(await writeChunk(chunk))) break;
-            if (sse) {
-              sse.feed(decoder.decode(chunk, { stream: true }));
-            } else if (jsonText.length < MAX_PARSE_BUFFER) {
-              jsonText += decoder.decode(chunk, { stream: true });
-              if (jsonText.length >= MAX_PARSE_BUFFER) parseOverflow = true;
-            }
+  try {
+    if (upstream.body) {
+      for await (const chunk of upstream.body) {
+        if (ttfbMs === null) ttfbMs = Math.round(performance.now() - t0);
+        timeout.refresh(); // treat the cap as an idle timeout, not total-duration
+        if (relay) {
+          const forward = relay.feed(decoder.decode(chunk, { stream: true }));
+          if (!(await writeChunk(forward))) break;
+        } else {
+          if (!(await writeChunk(chunk))) break;
+          if (sse) {
+            sse.feed(decoder.decode(chunk, { stream: true }));
+          } else if (jsonText.length < MAX_PARSE_BUFFER) {
+            jsonText += decoder.decode(chunk, { stream: true });
+            if (jsonText.length >= MAX_PARSE_BUFFER) parseOverflow = true;
           }
         }
       }
-    } catch (err) {
-      aborted = true;
-      if (!clientClosed) base.streamError = String(err.message || err).slice(0, 200);
     }
-    clearTimeout(timeout);
-    if (sse) {
-      sse.feed(decoder.decode());
-      sse.flush();
-    }
-    if (relay && !res.destroyed) {
-      const tail = relay.flush();
-      if (tail) res.write(tail);
-    }
-    res.end();
+  } catch (err) {
+    aborted = true;
+    if (!clientState.closed) base.streamError = String(err.message || err).slice(0, 200);
+  }
+  clearTimeout(timeout);
+  if (sse) {
+    sse.feed(decoder.decode());
+    sse.flush();
+  }
+  if (relay && !res.destroyed) {
+    const tail = relay.flush();
+    if (tail) res.write(tail);
+  }
+  res.end();
 
-    // ---- extract usage & log -------------------------------------------------
-    let usage = null;
-    let respModel = null;
-    if (isSse) {
-      ({ usage, model: respModel } = acc.result());
-    } else if (isJson && jsonText && !parseOverflow) {
-      try {
-        ({ usage, model: respModel } = extractFromJson(provider.kind, JSON.parse(jsonText)));
-      } catch {
-        /* unparseable body - leave usage null */
-      }
+  // ---- extract usage & log -------------------------------------------------
+  let usage = null;
+  let respModel = null;
+  if (isSse) {
+    ({ usage, model: respModel } = acc.result());
+  } else if (isJson && jsonText && !parseOverflow) {
+    try {
+      ({ usage, model: respModel } = extractFromJson(provider.kind, JSON.parse(jsonText)));
+    } catch {
+      /* unparseable body - leave usage null */
     }
+  }
 
-    const ok = upstream.status >= 200 && upstream.status < 300 && !aborted;
-    let errorType = null;
-    let errorMessage = null;
-    if (clientClosed || (aborted && !base.streamError)) {
-      errorType = 'client_abort';
-      errorMessage = 'client disconnected mid-stream';
-    } else if (aborted) {
-      errorType = 'stream_error';
-      errorMessage = base.streamError;
-    } else if (!ok) {
-      errorType = 'upstream_error';
-      errorMessage = extractErrorMessage(jsonText) || `HTTP ${upstream.status}`;
-    }
-    delete base.streamError;
+  const ok = upstream.status >= 200 && upstream.status < 300 && !aborted;
+  let errorType = null;
+  let errorMessage = null;
+  if (clientState.closed || (aborted && !base.streamError)) {
+    errorType = 'client_abort';
+    errorMessage = 'client disconnected mid-stream';
+  } else if (aborted) {
+    errorType = 'stream_error';
+    errorMessage = base.streamError;
+  } else if (!ok) {
+    errorType = 'upstream_error';
+    errorMessage = extractErrorMessage(jsonText) || `HTTP ${upstream.status}`;
+  }
+  delete base.streamError;
 
-    finishRecord({
-      base,
-      status: upstream.status,
-      ok,
-      ttfbMs,
-      latencyMs: Math.round(performance.now() - t0),
-      usage,
-      respModel,
-      errorType,
-      errorMessage,
-      provider,
-      pricing,
-      store,
-    });
-  };
+  finishRecord({
+    base,
+    status: upstream.status,
+    ok,
+    ttfbMs,
+    latencyMs: Math.round(performance.now() - t0),
+    usage,
+    respModel,
+    errorType,
+    errorMessage,
+    provider,
+    pricing,
+    store,
+  });
 }
 
 function finishRecord({

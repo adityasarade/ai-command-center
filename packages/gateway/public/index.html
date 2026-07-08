@@ -93,6 +93,7 @@
         <button data-view="alerts" role="tab">
           Alerts <span class="badge" id="alertBadge" hidden></span>
         </button>
+        <button data-view="evals" role="tab">Evals</button>
       </nav>
 
       <section class="card admin" id="adminPanel" hidden>
@@ -271,6 +272,7 @@
                   <th class="num">Tokens</th>
                   <th class="num">p50</th>
                   <th class="num">p95</th>
+                  <th class="num">Eval</th>
                 </tr>
               </thead>
               <tbody id="promptsBody"></tbody>
@@ -359,6 +361,85 @@
             <button class="mini" id="budgetSave">set budget</button>
           </div>
           <div class="admin-err" id="budgetErr"></div>
+        </section>
+      </div>
+
+      <div class="view" id="view-evals" hidden>
+        <section class="card">
+          <div class="card-head">
+            <h2>Eval runs</h2>
+            <span class="card-note">offline quality scores, judged 1-5</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Prompt</th>
+                  <th>Dataset</th>
+                  <th>Target · Judge</th>
+                  <th class="num">Rows</th>
+                  <th class="num">Avg score</th>
+                  <th class="num">Errors</th>
+                  <th class="num">Cost</th>
+                </tr>
+              </thead>
+              <tbody id="evalRunsBody"></tbody>
+            </table>
+            <div class="feed-empty" id="evalRunsEmpty" hidden>
+              No eval runs yet. Add a dataset and run one below.
+            </div>
+          </div>
+        </section>
+        <section class="grid grid-b" id="evalAdmin" hidden>
+          <div class="card">
+            <div class="card-head">
+              <h2>Datasets</h2>
+              <span class="card-note">test cases you own</span>
+            </div>
+            <div id="datasetsList" class="alerts-list"></div>
+            <div class="admin-form eval-form">
+              <input id="dsName" placeholder="dataset name (e.g. triage-cases)" />
+              <textarea
+                id="dsRows"
+                rows="5"
+                placeholder='one JSON row per line, e.g. {"input":"...", "expected":"..."}'
+              ></textarea>
+              <button class="mini" id="dsSave">save dataset</button>
+            </div>
+            <div class="admin-err" id="dsErr"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h2>Run an eval</h2>
+            </div>
+            <div class="admin-form eval-form">
+              <select id="evDataset" aria-label="dataset"></select>
+              <input id="evPrompt" placeholder="prompt label (e.g. triage)" />
+              <input id="evVersion" placeholder="version (e.g. v3)" />
+              <textarea
+                id="evTemplate"
+                rows="2"
+                placeholder="prompt template - use {{input}} (optional)"
+              ></textarea>
+              <div class="admin-form" style="padding: 0">
+                <input id="evTargetProvider" placeholder="target provider" />
+                <input id="evTargetModel" placeholder="target model" />
+              </div>
+              <div class="admin-form" style="padding: 0">
+                <input id="evJudgeProvider" placeholder="judge provider" />
+                <input id="evJudgeModel" placeholder="judge model" />
+              </div>
+              <textarea
+                id="evRubric"
+                rows="2"
+                placeholder="extra rubric for the judge (optional)"
+              ></textarea>
+              <button class="mini" id="evRun">run eval</button>
+            </div>
+            <div class="admin-err" id="evErr"></div>
+            <div class="card-note" id="evKeyNote" style="margin-top: 8px"></div>
+          </div>
         </section>
       </div>
     </main>

@@ -122,6 +122,69 @@ export function centralKey(provider, config) {
   return null;
 }
 
+const DEFAULT_RETRY_ON = [429, 500, 502, 503, 504];
+
+/**
+ * Build the routing table from config.routes. A route is a virtual provider
+ * that fans a request out across an ordered pool of real providers, opt-in:
+ *
+ *   "routes": {
+ *     "chat": {
+ *       "members": ["groq", "together", "openrouter"],
+ *       "strategy": "failover",          // or "round-robin"
+ *       "retryOn": [429, 500, 502, 503, 504]
+ *     }
+ *   }
+ *
+ * Reached at /r/<route>/<rest> (e.g. /r/chat/v1/chat/completions), optionally
+ * behind /k/<key> or /p/<project>. Members should be same-schema (all the same
+ * `kind`) so the untouched request body works against each - the gateway does
+ * NOT translate between provider schemas. Members whose id is unknown are
+ * dropped; a route with no resolvable members is skipped (and reported).
+ */
+export function buildRoutes(config, table) {
+  const routes = {};
+  const warnings = [];
+  for (const [name, r] of Object.entries(config.routes || {})) {
+    if (!/^[a-zA-Z0-9._-]{1,64}$/.test(name)) {
+      warnings.push(`route "${name}": invalid name (letters, digits, . _ - only) - skipped`);
+      continue;
+    }
+    if (table[name]) {
+      warnings.push(`route "${name}": shadows a provider id - reach it at /r/${name}/…`);
+    }
+    if (!r || !Array.isArray(r.members) || r.members.length === 0) {
+      warnings.push(`route "${name}": needs a non-empty "members" array - skipped`);
+      continue;
+    }
+    const members = [];
+    for (const id of r.members) {
+      if (table[id]) members.push(table[id]);
+      else warnings.push(`route "${name}": unknown member provider "${id}" - dropped`);
+    }
+    if (!members.length) {
+      warnings.push(`route "${name}": no valid members - skipped`);
+      continue;
+    }
+    const kinds = new Set(members.map((m) => m.kind));
+    if (kinds.size > 1) {
+      warnings.push(
+        `route "${name}": mixes provider kinds (${[...kinds].join(', ')}); fallback only works across same-schema providers, so requests may fail on the odd one out`,
+      );
+    }
+    const retryOn = new Set(
+      (Array.isArray(r.retryOn) ? r.retryOn : DEFAULT_RETRY_ON).map(Number).filter(Number.isFinite),
+    );
+    routes[name] = {
+      name,
+      members,
+      retryOn,
+      strategy: r.strategy === 'round-robin' ? 'round-robin' : 'failover',
+    };
+  }
+  return { routes, warnings };
+}
+
 /**
  * Parse an incoming proxy path.
  *   /k/<gateway-key>/<provider>/<rest...>   (auth enabled)
@@ -131,7 +194,7 @@ export function centralKey(provider, config) {
  * attribution once auth is locked). Returns { key, project, providerId, rest }
  * or null when the provider segment matches nothing (caller 404s with help).
  */
-export function parseProxyPath(pathname, table) {
+export function parseProxyPath(pathname, table, routes = {}) {
   let project = null;
   let key = null;
   let segments = pathname.replace(/^\/+/, '').split('/');
@@ -142,6 +205,12 @@ export function parseProxyPath(pathname, table) {
   if (segments[0] === 'p' && segments.length >= 3) {
     project = decodeURIComponent(segments[1]);
     segments = segments.slice(2);
+  }
+  // Virtual route: /r/<route>/<rest…> fans out across the route's member pool.
+  if (segments[0] === 'r' && segments.length >= 3 && routes[decodeURIComponent(segments[1])]) {
+    const routeName = decodeURIComponent(segments[1]);
+    const rest = '/' + segments.slice(2).join('/');
+    return { key, project, routeName, rest };
   }
   const providerId = segments[0];
   if (!providerId || !table[providerId]) return null;
