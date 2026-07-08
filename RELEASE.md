@@ -17,6 +17,18 @@
 - **Verified**: 61 tests pass, evals pass, the published tarball includes LICENSE
   and README (26 files, ~130 kB).
 
+## ⏳ Ready to publish: 0.1.1
+
+`packages/gateway` is bumped to `0.1.1` (dashboard search + pagination on every
+view; CI glob fix). Committed and CI-green; the npm upload needs your OTP:
+
+```bash
+cd packages/gateway
+npm publish --access public       # publishes ai-command-center@0.1.1, asks for OTP
+```
+
+Then tag it: `git tag v0.1.1 && git push origin v0.1.1`.
+
 - **Tagged**: `v0.1.0` is pushed, with a GitHub Release:
   https://github.com/adityasarade/ai-command-center/releases/tag/v0.1.0
 
