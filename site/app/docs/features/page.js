@@ -82,9 +82,75 @@ client.chat.completions.create(
         each anomaly says exactly why it fired.
       </p>
 
+      <h2>Provider routing (failover &amp; load-balancing)</h2>
+      <p>
+        Define a <strong>route</strong> - a virtual provider that fans requests across an ordered
+        pool of same-schema providers - and call it at <code>/r/&lt;route&gt;/…</code>. On a network
+        error or a retryable status (429/500/502/503/504 by default), the gateway falls over to the
+        next member before any response byte is streamed. It is opt-in, needs no client code change,
+        and uses each member&apos;s central key. Every attempt is logged, so fallbacks show up in
+        the request feed with a <code>via &lt;route&gt;</code> tag.
+      </p>
+      <CodeBlock
+        lang="jsonc"
+        code={`// aicc.config.json
+{
+  "keys": { "groq": "gsk_...", "together": "...", "openrouter": "..." },
+  "routes": {
+    "chat": {
+      "members": ["groq", "together", "openrouter"],
+      "strategy": "failover",          // or "round-robin"
+      "retryOn": [429, 500, 502, 503, 504]
+    }
+  }
+}`}
+      />
+      <CodeBlock
+        lang="python"
+        code={`# point the base URL at the route instead of a single provider
+client = OpenAI(base_url="http://localhost:4321/p/app/r/chat/v1")`}
+      />
+      <p>
+        Members should share a schema (all OpenAI-compatible, say) - the gateway forwards your body
+        unchanged and does not translate between provider APIs.
+      </p>
+
+      <h2>Quality evals (offline)</h2>
+      <p>
+        Score prompt versions against datasets you own, so &quot;which version is cheaper&quot;
+        becomes &quot;which version is better.&quot; A <strong>dataset</strong> is a set of{' '}
+        <code>{'{ input, expected? }'}</code> rows. A run sends each input to a target model, asks a
+        judge model to score the answer 1-5 against a rubric, and records the result - shown in the{' '}
+        <strong>Evals</strong> view and joined onto the Prompts view as an average score per
+        version. It is fully offline: it never captures live traffic, and needs a central key for
+        the target and judge providers.
+      </p>
+      <CodeBlock
+        lang="bash"
+        code={`# create a dataset and run an eval from the dashboard (Evals tab), or via the API:
+curl -X POST http://localhost:4321/api/evals/dataset -H "content-type: application/json" \\
+  -d '{"name":"triage","rows":[{"input":"card declined"},{"input":"refund status"}]}'
+
+curl -X POST http://localhost:4321/api/evals/run -H "content-type: application/json" \\
+  -d '{"dataset":"triage","prompt":"triage","promptVersion":"v3",
+       "target":{"provider":"openai","model":"gpt-4o-mini"},
+       "judge":{"provider":"openai","model":"gpt-4o"}}'`}
+      />
+
+      <h2>Roles &amp; per-project grants</h2>
+      <p>
+        Beyond admin and member, there is a read-only <strong>viewer</strong> role. Any non-admin
+        user can also be granted access to specific projects (<code>allowedProjects</code>), which
+        stacks on top of their team&apos;s projects - so you can give someone exactly the projects
+        they need without a team. Manage roles and grants in the settings panel. Full OIDC/SAML SSO
+        is on the <a href="/#roadmap">roadmap</a>; the built-in accounts cover single-team
+        self-hosting today.
+      </p>
+
       <div className="callout">
         None of this stores prompt or response content - only the header values you send (a trace
-        id, a prompt name/version) plus the usual metadata. See{' '}
+        id, a prompt name/version) plus the usual metadata. Eval datasets and their scored outputs
+        are test data you create, stored under <code>dataDir/evals/</code>. See{' '}
         <a href="/docs/security">Security</a>.
       </div>
 
