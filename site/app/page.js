@@ -32,7 +32,7 @@ const client = new OpenAI({
     .build();`,
   },
   {
-    label: 'env var (any language)',
+    label: 'env var',
     lang: 'bash',
     code: `# no code change at all - the SDK reads this
 export OPENAI_BASE_URL="http://localhost:4321/p/my-app/openai/v1"
@@ -48,17 +48,50 @@ export ANTHROPIC_BASE_URL="http://localhost:4321/p/my-app/anthropic"`,
   },
 ];
 
+const FEATURES = [
+  [
+    'Traces',
+    'Session timelines',
+    'Group the calls in one request or agent run with a trace header, then read the timeline.',
+  ],
+  [
+    'Prompts',
+    'Version tracking',
+    'Tag prompts by version and compare cost, latency and error rate as they change.',
+  ],
+  [
+    'Budgets',
+    'Limits & alerts',
+    'Per-project monthly budgets, error-rate and latency thresholds, and an optional webhook.',
+  ],
+  [
+    'Anomalies',
+    'Spike detection',
+    'Explainable rules flag cost spikes and error bursts per project - no ML, no black box.',
+  ],
+  [
+    'Models',
+    'Head-to-head',
+    'Effective cost per million tokens, p50/p95 latency and error rate, compared side by side.',
+  ],
+  [
+    'Privacy',
+    'Keys & data stay put',
+    'Provider keys pass through and are never logged. Prompt and response bodies are never stored.',
+  ],
+];
+
 const ROADMAP = [
   [
     'shipped',
     'Cost & usage dashboard',
-    'Spend, tokens, latency, errors per project - in INR, USD or EUR.',
+    'Spend, tokens, latency and errors per project, in INR, USD or EUR.',
   ],
   ['shipped', 'Traces / sessions', 'Group an app request or agent run into a call timeline.'],
   [
     'shipped',
     'Prompt versioning',
-    'Track prompt templates by version and compare cost and quality drift.',
+    'Track templates by version; compare cost, latency and error rate.',
   ],
   [
     'shipped',
@@ -66,14 +99,10 @@ const ROADMAP = [
     'Per-project monthly budgets, threshold alerts, optional webhook.',
   ],
   ['shipped', 'Anomaly detection', 'Rule-based cost-spike and error-burst flags, per project.'],
-  [
-    'shipped',
-    'Model comparison',
-    'Effective cost/1M tokens, p50/p95 latency and error rate, side by side.',
-  ],
+  ['shipped', 'Model comparison', 'Effective cost/1M tokens, p50/p95 latency and error rate.'],
   ['next', 'Quality evals', 'LLM-as-judge scoring and datasets, run against prompt versions.'],
-  ['next', 'Provider routing', 'Fallback and load-balancing across providers (opt-in).'],
-  ['next', 'SSO & RBAC depth', 'OIDC/SAML sign-in beyond the built-in username/password.'],
+  ['next', 'Provider routing', 'Fallback and load-balancing across providers, opt-in.'],
+  ['next', 'SSO & deeper RBAC', 'OIDC / SAML sign-in beyond the built-in accounts.'],
   ['next', 'Managed option', 'A hosted deployment for teams that would rather not self-host.'],
 ];
 
@@ -81,44 +110,63 @@ export default function Home() {
   return (
     <>
       <div className="hero-wrap">
-        <header className="hero wrap">
-          <span className="eyebrow">
-            <span className="dot" /> open source · self-hosted · zero dependencies · MIT
-          </span>
-          <h1>
-            The command center for <span className="grad">every AI project you run.</span>
-          </h1>
-          <p className="lede">
-            A dependency-free LLM gateway and self-hosted dashboard. Point any project at it - any
-            language, one command - and get cost, usage, latency, traces, prompt versions, budgets
-            and anomaly alerts across your whole AI portfolio. No SDK to adopt, no database to run.
-          </p>
-          <div className="hero-actions">
-            <Link href="/docs" className="btn btn-primary">
-              Get started
-            </Link>
-            <a href={REPO} target="_blank" rel="noreferrer" className="btn btn-ghost">
-              Star on GitHub
-            </a>
-            <span className="term">
-              <span className="prompt">$</span> npx ai-command-center <span className="cursor" />
+        <div className="wrap hero">
+          <div>
+            <span className="eyebrow">
+              <span className="dot" /> open source · self-hosted · zero dependencies
             </span>
+            <h1>
+              The command center for <span className="grad">every AI project you run.</span>
+            </h1>
+            <p className="lede">
+              A dependency-free LLM gateway and self-hosted dashboard. Point any project at it - any
+              language, one command - and get cost, traces, prompt versions, budgets and anomaly
+              alerts across your whole AI portfolio. No SDK to adopt, no database to run.
+            </p>
+            <div className="hero-actions">
+              <Link href="/docs" className="btn btn-primary">
+                Get started
+              </Link>
+              <span className="term">
+                <span className="prompt">$</span> npx ai-command-center <span className="cursor" />
+              </span>
+            </div>
+            <div className="hero-meta">
+              <span>
+                <b>&lt;1ms</b> proxy overhead
+              </span>
+              <span>
+                <b>0</b> runtime deps
+              </span>
+              <span>
+                <b>11+</b> providers
+              </span>
+              <span>
+                <b>MIT</b> licensed
+              </span>
+            </div>
           </div>
-        </header>
-
-        <section className="wrap" style={{ paddingBottom: 56 }}>
-          <DemoDashboard />
-          <p className="hero-note" style={{ marginTop: 12, textAlign: 'center' }}>
-            A live, clickable sample - toggle currency and range. Run{' '}
-            <code>npx ai-command-center demo</code> for the real dashboard with five views.
-          </p>
-        </section>
+          <div>
+            <DemoDashboard />
+            <p
+              style={{
+                marginTop: 12,
+                textAlign: 'center',
+                fontFamily: 'var(--font-mono), monospace',
+                fontSize: 12.5,
+                color: 'var(--muted)',
+              }}
+            >
+              live sample - toggle currency &amp; range
+            </p>
+          </div>
+        </div>
       </div>
 
       <section className="sec">
         <div className="wrap">
           <div className="sec-head">
-            <span className="mono-label">Integration</span>
+            <span className="mono-label">01 / Integration</span>
             <h2>Change one base URL. Keep your keys. Ship.</h2>
             <p>
               Every provider SDK already supports a custom base URL, so onboarding a project is one
@@ -130,11 +178,11 @@ export default function Home() {
             <CodeTabs items={SNIPPETS} />
             <div className="card">
               <span className="ic">HOW IT WORKS</span>
-              <p style={{ marginTop: 10 }}>
+              <p style={{ marginTop: 10, color: 'var(--ink-2)', fontSize: 15 }}>
                 Your app calls the LLM as before, but through the gateway. It forwards the request
                 untouched, streams the response straight back, and reads token usage on the side to
-                compute cost. Added latency is well under a millisecond; nothing sits between you
-                and the provider except a thin, auditable proxy.
+                compute cost. Added latency is well under a millisecond - a thin, auditable proxy,
+                nothing more.
               </p>
               <div className="chips">
                 <span>OpenAI</span>
@@ -157,59 +205,54 @@ export default function Home() {
       <section className="sec">
         <div className="wrap">
           <div className="sec-head">
-            <span className="mono-label">What you get</span>
+            <span className="mono-label">02 / Capabilities</span>
             <h2>More than a cost meter. A control room.</h2>
             <p>
-              Every capability works from the same one-command install, with metadata-only storage
+              Every capability runs from the same one-command install, with metadata-only storage
               and no external services.
             </p>
           </div>
-          <div className="bento">
-            <div className="cell wide">
-              <span className="k">Cost &amp; usage</span>
+
+          <div className="feature-primary">
+            <div>
+              <span className="ic" style={{ fontFamily: 'var(--font-mono), monospace' }}>
+                COST &amp; USAGE
+              </span>
               <h3>Spend across your whole portfolio, in your currency</h3>
               <p>
                 Per-request cost from real token counts (including cached tokens), grouped by
                 project and model, with latency percentiles and error rates. Shown in ₹ / $ / € with
-                live exchange rates; stored in USD.
+                live exchange rates and stored in USD.
               </p>
             </div>
-            <div className="cell third">
-              <span className="k">Traces</span>
-              <h3>Session timelines</h3>
-              <p>Group the calls in one request or agent run and see the timeline.</p>
+            <div className="mini-stats">
+              <div className="mini-stat">
+                <b>₹ / $ / €</b>
+                <span>live FX, INR-first</span>
+              </div>
+              <div className="mini-stat">
+                <b>p50 / p95</b>
+                <span>latency per model</span>
+              </div>
+              <div className="mini-stat">
+                <b>cached</b>
+                <span>tokens priced right</span>
+              </div>
+              <div className="mini-stat">
+                <b>live</b>
+                <span>SSE request feed</span>
+              </div>
             </div>
-            <div className="cell third">
-              <span className="k">Prompts</span>
-              <h3>Version tracking</h3>
-              <p>Compare cost, latency and error rate across prompt versions.</p>
-            </div>
-            <div className="cell third">
-              <span className="k">Budgets</span>
-              <h3>Limits &amp; alerts</h3>
-              <p>Monthly budgets per project, threshold alerts, optional webhook.</p>
-            </div>
-            <div className="cell third">
-              <span className="k">Anomalies</span>
-              <h3>Spike detection</h3>
-              <p>Rule-based cost-spike and error-burst flags, per project.</p>
-            </div>
-            <div className="cell half">
-              <span className="k">Models</span>
-              <h3>Compare models head to head</h3>
-              <p>
-                Effective cost per million tokens, p50/p95 latency and error rate side by side - so
-                a model swap is a decision, not a guess.
-              </p>
-            </div>
-            <div className="cell half">
-              <span className="k">Privacy</span>
-              <h3>Your keys and data stay yours</h3>
-              <p>
-                Provider keys pass straight through and are never logged. Prompt and response bodies
-                are never stored - metadata only. Everything runs on your machine.
-              </p>
-            </div>
+          </div>
+
+          <div className="feature-grid">
+            {FEATURES.map(([k, title, desc]) => (
+              <div className="feature" key={title}>
+                <span className="fk">{k}</span>
+                <h3>{title}</h3>
+                <p>{desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -217,26 +260,29 @@ export default function Home() {
       <section className="sec">
         <div className="wrap">
           <div className="sec-head">
-            <span className="mono-label">Honest positioning</span>
+            <span className="mono-label">03 / Positioning</span>
             <h2>Lightweight on purpose.</h2>
             <p>
-              Full platforms like Langfuse, Helicone and LangSmith go deeper on tracing and
-              evaluation; LiteLLM and Portkey are richer gateways. They are also a database, a queue
-              and an analytics cluster to operate. This is one command and a file of JSONL - the
-              answer to <em>&ldquo;what is each project spending, and is anything off?&rdquo;</em>{' '}
-              without standing up infrastructure.
+              Platforms like Langfuse, Helicone and LangSmith go deeper on tracing and evaluation;
+              LiteLLM and Portkey are richer gateways. They are also a database, a queue and an
+              analytics cluster to operate. This is one command and a file of JSONL - the answer to{' '}
+              <em>&ldquo;what is each project spending, and is anything off?&rdquo;</em> without
+              standing up infrastructure.
             </p>
           </div>
-          <Link href="/docs/comparison" className="btn btn-ghost">
-            See the full, fact-checked comparison
-          </Link>
+          <div className="note">
+            Reach for a full platform when you need distributed span trees, LLM-as-judge evals or
+            provider routing. Reach for this when you want honest cost and usage visibility across
+            many projects, self-hosted, in minutes.{' '}
+            <Link href="/docs/comparison">See the fact-checked comparison →</Link>
+          </div>
         </div>
       </section>
 
       <section className="sec" id="roadmap">
         <div className="wrap">
           <div className="sec-head">
-            <span className="mono-label">Roadmap</span>
+            <span className="mono-label">04 / Roadmap</span>
             <h2>Shipped, and what&apos;s next.</h2>
             <p>Clear about what exists today and what is deliberately not built yet.</p>
           </div>
@@ -244,9 +290,8 @@ export default function Home() {
             {ROADMAP.map(([tag, title, desc]) => (
               <div className="road-item" key={title}>
                 <span className={`tag ${tag}`}>{tag}</span>
-                <span className="d">
-                  <b>{title}.</b> {desc}
-                </span>
+                <span className="rt">{title}</span>
+                <span className="rd">{desc}</span>
               </div>
             ))}
           </div>
@@ -255,10 +300,17 @@ export default function Home() {
 
       <section className="sec">
         <div className="wrap" style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'clamp(26px,4vw,40px)' }}>
+          <h2 style={{ fontSize: 'clamp(28px,4vw,42px)' }}>
             Give every AI project a command center.
           </h2>
-          <p style={{ color: 'var(--ink-2)', margin: '12px auto 26px', maxWidth: '54ch' }}>
+          <p
+            style={{
+              color: 'var(--ink-2)',
+              margin: '14px auto 28px',
+              maxWidth: '52ch',
+              fontSize: 17,
+            }}
+          >
             No signup, no database, no vendor. One command and a base URL.
           </p>
           <div className="hero-actions" style={{ justifyContent: 'center' }}>
@@ -266,7 +318,7 @@ export default function Home() {
               Read the docs
             </Link>
             <a href={REPO} target="_blank" rel="noreferrer" className="btn btn-ghost">
-              GitHub
+              Star on GitHub
             </a>
           </div>
         </div>
