@@ -132,6 +132,13 @@ curl -X POST http://localhost:4321/api/track -H "Content-Type: application/json"
   -d '{"project":"nightly-job","provider":"openai","model":"gpt-4o","tokensIn":52000,"tokensOut":9000}'
 ```
 
+`/api/track` is also the first-class path for **non-LLM AI spend** - STT, TTS,
+telephony minutes, image generation, batch imports. Set `costUsd` directly for
+per-minute/per-character pricing, reuse the LLM calls' `trace` id so an entire
+pipeline (STT → LLM → TTS) reads as one session with a true total, and backdate
+records with `ts`. Example:
+[docs/api → /api/track](https://aicommandcenter.vercel.app/docs/api).
+
 ## How it compares
 
 AI Command Center is a self-hosted, language-agnostic command center that runs

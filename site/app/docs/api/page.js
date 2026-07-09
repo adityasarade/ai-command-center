@@ -170,7 +170,7 @@ export default function Page() {
       <h2>POST /api/track</h2>
       <p>
         Report usage the proxy can&apos;t see. Cost is computed for you if you omit{' '}
-        <code>costUsd</code>. Send one object or an array.
+        <code>costUsd</code>. Send one object or an array (up to 1000 records per call).
       </p>
       <CodeBlock
         lang="bash"
@@ -186,6 +186,42 @@ export default function Page() {
   }'`}
       />
       <CodeBlock lang="json" label="response" code={`{ "saved": 1 }`} />
+
+      <h3>Not just LLMs: track any AI spend</h3>
+      <p>
+        This is the first-class path for costs that never pass through the proxy - speech-to-text,
+        TTS, telephony minutes, image generation, embeddings run elsewhere, batch jobs. Three fields
+        make it composable:
+      </p>
+      <ul>
+        <li>
+          <code>costUsd</code> - set it explicitly for anything priced per minute/character/call
+          instead of per token; the pricing engine is skipped and your number is recorded as-is.
+        </li>
+        <li>
+          <code>trace</code> - use the same trace id as the LLM calls around it and the whole
+          pipeline (STT → LLM → TTS) shows up as one session on the Traces view, with a true total
+          cost.
+        </li>
+        <li>
+          <code>ts</code> - epoch-ms timestamp for backfills: import yesterday&apos;s batch or a
+          provider invoice and it lands on the right day in every chart.
+        </li>
+      </ul>
+      <CodeBlock
+        lang="bash"
+        label="a voice-agent turn: STT minutes + TTS characters joined to the LLM's trace"
+        code={`curl -X POST http://localhost:4321/api/track \\
+  -H "Content-Type: application/json" \\
+  -d '[
+    { "project": "voice-agent", "provider": "stt", "model": "streaming-stt",
+      "trace": "call-8123", "costUsd": 0.0062, "latencyMs": 240 },
+    { "project": "voice-agent", "provider": "tts", "model": "neural-tts",
+      "trace": "call-8123", "costUsd": 0.0031 },
+    { "project": "voice-agent", "provider": "telephony", "model": "sip-minutes",
+      "trace": "call-8123", "costUsd": 0.0140, "ts": 1783605600000 }
+  ]'`}
+      />
 
       <h2>Example: pull today&apos;s spend</h2>
       <CodeBlock

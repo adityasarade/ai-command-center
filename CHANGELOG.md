@@ -28,6 +28,11 @@ first-try; everything below fixes the rough edges around it.
 - **`stats` names unpriced models**: instead of a bare count, the CLI prints
   the exact models to add pricing overrides for (also exposed as
   `unpricedModels` on `/api/stats`).
+- **Instructive empty states on Prompts and Alerts**, matching the Traces tab:
+  Prompts explains the `x-aicc-prompt` / `x-aicc-prompt-version` headers and
+  what you get from them; Alerts says budget alerts need a monthly budget (and
+  points at the Budgets card below), while anomalies/error/latency alerts are
+  called out as automatic.
 
 ### Fixed
 
@@ -54,6 +59,10 @@ first-try; everything below fixes the rough edges around it.
   npm version, `--host 0.0.0.0` in-container with the host port bound to
   `127.0.0.1`, data dir on a volume, `restart: unless-stopped`) and the
   base-URL kill-switch pattern.
+- `/api/track` documented as the first-class path for non-LLM AI spend
+  (STT/TTS/telephony/batch): explicit `costUsd` for non-token pricing, shared
+  `trace` ids to join a whole pipeline into one session, and `ts` backdating
+  for imports - with a voice-agent example in the API docs.
 
 ## [0.2.0] - 2026-07-08
 

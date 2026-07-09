@@ -834,7 +834,7 @@
     if (!total)
       emptyEl.innerHTML = promptsAll.length
         ? 'No prompts match your filter.'
-        : 'No prompts tracked. Send an <code>x-aicc-prompt</code> (and <code>x-aicc-prompt-version</code>) header.';
+        : 'No prompts tracked yet. Send <code>x-aicc-prompt</code> / <code>x-aicc-prompt-version</code> headers with your calls to compare cost, latency, and error rate per prompt version here.';
     $('promptsBody').innerHTML = rows
       .map(
         (p) => `<tr>
@@ -929,7 +929,7 @@
           <span>${esc(a.message)}</span></div>`,
           )
           .join('')
-      : `<div class="alerts-empty">${alerts.length ? 'No alerts match your filter.' : 'No active alerts. All projects within budget and thresholds.'}</div>`;
+      : `<div class="alerts-empty">${alerts.length ? 'No alerts match your filter.' : 'No active alerts. Budget alerts need a monthly budget - set one per project in the Budgets card below; error-rate and latency alerts fire on their own.'}</div>`;
 
     const fAnom = anomalies.filter((a) => match(`${a.type} ${a.message} ${a.project || ''}`));
     $('anomaliesList').innerHTML = fAnom.length
@@ -940,7 +940,7 @@
           <span>${fmtDate(a.date)} - ${esc(a.message)}</span></div>`,
           )
           .join('')
-      : `<div class="alerts-empty">${anomalies.length ? 'No anomalies match your filter.' : 'No anomalies detected.'}</div>`;
+      : `<div class="alerts-empty">${anomalies.length ? 'No anomalies match your filter.' : 'No anomalies detected. Cost spikes and error bursts are flagged here automatically - nothing to configure.'}</div>`;
 
     const fBudg = budgets.filter((b) => match(b.project));
     $('budgetsList').innerHTML = fBudg.length
@@ -955,7 +955,7 @@
           </div>`;
           })
           .join('')
-      : `<div class="alerts-empty">${budgets.length ? 'No budgets match your filter.' : 'No budgets set yet.'}</div>`;
+      : `<div class="alerts-empty">${budgets.length ? 'No budgets match your filter.' : isAdmin ? 'No budgets set yet - pick a project below and set a monthly USD amount to get spend alerts.' : 'No budgets set yet. An admin can set monthly project budgets here.'}</div>`;
   }
 
   // Parse a comma-separated project-grant input into a unique-name array.

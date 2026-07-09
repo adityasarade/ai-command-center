@@ -98,7 +98,7 @@ aicc.init(project="invoice-bot")   # before you construct any client`}
 init({ project: "support-bot" });`}
       />
 
-      <h2>Batch jobs &amp; unsupported providers</h2>
+      <h2>Batch jobs, non-LLM spend &amp; unsupported providers</h2>
       <p>
         Can&apos;t route through the proxy? Report usage directly and it&apos;s priced and
         dashboarded the same way:
@@ -109,6 +109,13 @@ init({ project: "support-bot" });`}
   -H "Content-Type: application/json" \\
   -d '{"project":"nightly-job","provider":"openai","model":"gpt-4o","tokensIn":52000,"tokensOut":9000}'`}
       />
+      <p>
+        This also covers spend that isn&apos;t tokens at all - STT/TTS, telephony minutes, image
+        generation, batch imports. Set <code>costUsd</code> yourself, reuse the LLM calls&apos;{' '}
+        <code>trace</code> id to see the whole pipeline as one session, and backdate with{' '}
+        <code>ts</code>. Details and a voice-agent example:{' '}
+        <Link href="/docs/api">HTTP API → /api/track</Link>.
+      </p>
 
       <h2>Grouping without a path prefix</h2>
       <p>
