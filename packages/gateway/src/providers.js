@@ -100,18 +100,57 @@ export function buildProviderTable(config) {
   }
   for (const [id, p] of Object.entries(config.providers || {})) {
     if (!p || !p.upstream) continue;
+    // A config entry may reuse a built-in id (e.g. point "mistral" at a local
+    // proxy). It replaces the built-in but inherits its defaults (kind, auth
+    // header, key env) so an upstream-only override doesn't silently change
+    // how requests are authenticated or usage is parsed.
+    const base = BUILTIN_PROVIDERS[id];
     table[id] = {
       id,
-      kind: p.kind || 'openai',
+      fromConfig: true,
+      overridesBuiltin: !!base,
+      kind: p.kind || base?.kind || 'openai',
       upstream: String(p.upstream).replace(/\/+$/, ''),
-      authHeader: p.authHeader || 'authorization',
-      authPrefix: p.authHeader && p.authHeader !== 'authorization' ? '' : 'Bearer ',
+      authHeader: p.authHeader || base?.authHeader || 'authorization',
+      authPrefix: p.authHeader
+        ? p.authHeader !== 'authorization'
+          ? ''
+          : 'Bearer '
+        : base
+          ? base.authPrefix || ''
+          : 'Bearer ',
       key: p.key,
-      keyEnv: p.keyEnv,
-      streamUsageInject: p.streamUsageInject !== false,
+      keyEnv: p.keyEnv || base?.keyEnv,
+      streamUsageInject:
+        p.streamUsageInject != null
+          ? p.streamUsageInject !== false
+          : base
+            ? !!base.streamUsageInject
+            : true,
     };
   }
   return table;
+}
+
+/** Config-registered providers from an effective table (including entries that
+ *  override a built-in id - those must stay visible at startup too). */
+export function customProviders(table) {
+  return Object.values(table).filter((p) => p.fromConfig);
+}
+
+/**
+ * Human-readable description of where a provider's central key comes from,
+ * mirroring the resolution order of centralKey(). For CLI display.
+ */
+export function keySourceLabel(provider, config, env = process.env) {
+  if (config?.keys?.[provider.id]) return `key from config keys.${provider.id}`;
+  if (provider.key) return 'key from config (inline)';
+  if (provider.keyEnv) {
+    return env[provider.keyEnv]
+      ? `key from $${provider.keyEnv}`
+      : `key from $${provider.keyEnv} (not set - callers send their own)`;
+  }
+  return 'no central key - callers send their own';
 }
 
 /** Resolve a centrally-configured key for a provider, if any. */

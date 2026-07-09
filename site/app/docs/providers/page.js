@@ -70,6 +70,42 @@ export default function Page() {
 }
 // then call:  http://localhost:4321/p/my-app/azure/v1/chat/completions`}
       />
+      <p>
+        Registered providers show up in the <code>start</code> banner (marked <em>custom</em>, with
+        their upstream and where the API key comes from) and in{' '}
+        <code>npx ai-command-center snippets</code> - if yours is missing there, the registration
+        did not take (typo in the config, or the wrong config file picked up).
+      </p>
+      <p>
+        <strong>Custom providers need pricing overrides.</strong> Cost is looked up on the live
+        LiteLLM price sheet plus the shipped table - both only know mainstream cloud models. Models
+        served by a custom provider (an internal fine-tune, a regional provider&apos;s{' '}
+        <code>*-instruct</code> models, every Azure deployment alias) are usually absent, so their
+        requests are recorded with full token counts but <em>unpriced</em> (cost 0) until a{' '}
+        <code>pricing</code> block covers them. Pair every custom provider with its prices:
+      </p>
+      <CodeBlock
+        lang="jsonc"
+        code={`"providers": {
+  "sarvam": { "upstream": "https://api.sarvam.ai", "kind": "openai", "keyEnv": "SARVAM_API_KEY" }
+},
+"pricing": {
+  "sarvam-m": { "in": 0.8, "out": 1.6 },   // USD per 1M tokens
+  "saarika":  { "in": 0.5, "out": 0.5 }
+}`}
+      />
+      <p>
+        A provider-wide wildcard like{' '}
+        <code>&quot;sarvam:*&quot;: &#123; &quot;in&quot;: 0, &quot;out&quot;: 0 &#125;</code> is a
+        deliberate <em>policy</em>, not a fallback: once set, only provider-qualified entries (
+        <code>&quot;sarvam:sarvam-m&quot;: …</code>) override it - plain model keys for that
+        provider are ignored. Use it to price a whole provider at zero (e.g. self-hosted), qualified
+        keys plus the wildcard if you want per-model prices with a default underneath.
+      </p>
+      <p>
+        <code>npx ai-command-center stats</code> tells you when this is needed - it prints the
+        unpriced request count <em>and the exact model names</em> to add overrides for.
+      </p>
 
       <h2>How streaming usage is captured</h2>
       <p>

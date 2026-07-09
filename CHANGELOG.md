@@ -9,6 +9,52 @@ All notable changes to this project are documented here. The format follows
 Nothing yet. Open an issue or PR at
 https://github.com/adityasarade/ai-command-center.
 
+## [0.2.1] - 2026-07-09
+
+Polish release driven by a from-scratch external integration (a voice agent
+using Gemini plus an OpenAI-compatible custom provider): the proxy path worked
+first-try; everything below fixes the rough edges around it.
+
+### Added
+
+- **Custom providers are now visible**: config-registered providers appear in
+  the `start` banner (marked `(custom)`, plus a startup line per provider
+  showing upstream, kind, and where its API key comes from) and in `snippets`
+  output. Previously a typo'd registration produced silent 404s with zero
+  feedback that registration succeeded or failed.
+- **`--gateway <url>` for `stats` / `clear` / `demo`**: operate on a running
+  gateway's API instead of local files - works across machines and
+  `--data-dir`s.
+- **`stats` names unpriced models**: instead of a bare count, the CLI prints
+  the exact models to add pricing overrides for (also exposed as
+  `unpricedModels` on `/api/stats`).
+
+### Fixed
+
+- `stats` and `clear` print which store they actually read (data dir + record
+  count on disk, or the live gateway URL) and, when the resolved store is
+  empty, hint that a gateway may be running with a different `--data-dir` -
+  previously they silently read the default store when run from a different
+  cwd than the gateway.
+- `stats` against an auth-locked local gateway no longer fails with a bare
+  `HTTP 401`: it falls back to reading that gateway's files directly (the
+  discovery file already proves the data dir), and auth-gated `--gateway`
+  calls fail with an actionable message instead.
+- Startup banner record count uses a thousands separator (`Records 8,762`).
+
+### Docs
+
+- Providers: custom providers need pricing overrides - models absent from the
+  live LiteLLM price sheet are recorded unpriced (cost 0) until a `pricing`
+  block covers them; documented the pattern next to the custom-provider
+  example.
+- Self-hosting: new failure-mode section - the gateway sits in the request
+  path and is **not fail-open** (gateway down = connection refused at the
+  client after SDK retries). Added a supervised docker-compose example (pinned
+  npm version, `--host 0.0.0.0` in-container with the host port bound to
+  `127.0.0.1`, data dir on a volume, `restart: unless-stopped`) and the
+  base-URL kill-switch pattern.
+
 ## [0.2.0] - 2026-07-08
 
 ### Added

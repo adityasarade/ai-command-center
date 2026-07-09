@@ -11,6 +11,8 @@ import { FxService } from '../src/fx.js';
 import { AuthService } from '../src/auth.js';
 import { seedDemo } from '../src/demo.js';
 import { computeStats } from '../src/stats.js';
+import { buildProviderTable, customProviders, keySourceLabel } from '../src/providers.js';
+import { snippetsText, fmtInt, providerAlsoList } from '../src/cli-output.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PKG = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
@@ -96,8 +98,18 @@ async function cmdStart() {
   console.log(`  ${bold('Dashboard')}   ${green(url)}`);
   console.log(`  ${bold('Auth')}        ${authLine}`);
   console.log(`  ${bold('Data')}        ${dim(config.dataDir)}`);
-  console.log(`  ${bold('Records')}     ${dim(String(gateway.store.records.length))}`);
+  console.log(`  ${bold('Records')}     ${dim(fmtInt(gateway.store.records.length))}`);
   console.log('');
+  const custom = customProviders(gateway.table);
+  if (custom.length) {
+    console.log(`  ${bold('Custom providers')} ${dim('(from config)')}`);
+    for (const p of custom) {
+      console.log(
+        `    ${cyan(p.id.padEnd(11))} ${dim(`→ ${p.upstream} · ${p.kind}-kind${p.overridesBuiltin ? ' · overrides built-in' : ''} · ${keySourceLabel(p, config)}`)}`,
+      );
+    }
+    console.log('');
+  }
   if (auth.locked) {
     console.log(
       `  ${bold('Point your app at the gateway')} ${dim('(auth is on: URLs carry your project key)')}`,
@@ -114,7 +126,7 @@ async function cmdStart() {
     console.log(`    Anthropic   ${cyan(`${url}/p/<project>/anthropic`)}`);
     console.log(`    Gemini      ${cyan(`${url}/p/<project>/gemini`)}`);
   }
-  console.log(`    ${dim('also: openrouter, mistral, deepseek, xai, groq, together, ollama')}`);
+  console.log(`    ${dim(`also: ${providerAlsoList(gateway.table)}`)}`);
   console.log('');
   console.log(`  ${dim('Copy-paste integration code:')} ${bold('npx ai-command-center snippets')}`);
   console.log(`  ${dim('No data yet? Seed a live demo:')} ${bold('npx ai-command-center demo')}`);
@@ -139,13 +151,11 @@ async function cmdDemo() {
   const days = Number(flags.days) || 14;
   const live = await liveGateway(config);
   if (live) {
-    const res = await fetch(`${live}/api/demo`, {
+    const body = await gwJson(live, '/api/demo', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ days, clear: !!flags.clear }),
     });
-    const body = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(body?.error?.message || `gateway error: HTTP ${res.status}`);
     console.log(green(`✔ Seeded ${body.seeded} demo records into the running gateway.`));
     console.log(`  Dashboard: ${cyan(live)}`);
   } else {
@@ -156,7 +166,8 @@ async function cmdDemo() {
     await store.flush();
     console.log(green(`✔ Seeded ${seeded} demo records (${days} days, 4 sample projects).`));
     console.log(dim(`  (no running gateway detected - wrote directly to ${store.file};`));
-    console.log(dim('   a gateway running on another port/data-dir will not see these records)'));
+    console.log(dim('   a gateway running on another port/data-dir will not see these records -'));
+    console.log(dim('   target one explicitly with: npx ai-command-center demo --gateway <url>)'));
     console.log(`  Start the dashboard: ${bold('npx ai-command-center start')}`);
   }
   console.log(dim('  Demo data is tagged; remove it anytime with: npx ai-command-center clear'));
@@ -167,17 +178,23 @@ async function cmdClear() {
   const simulatedOnly = !flags.all;
   const live = await liveGateway(config);
   if (live) {
-    const res = await fetch(`${live}/api/records?simulated=${simulatedOnly ? '1' : '0'}`, {
+    const body = await gwJson(live, `/api/records?simulated=${simulatedOnly ? '1' : '0'}`, {
       method: 'DELETE',
     });
-    const body = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(body?.error?.message || `gateway error: HTTP ${res.status}`);
     console.log(green(`✔ Removed ${body.removed} ${simulatedOnly ? 'demo ' : ''}records.`));
+    console.log(dim(`  (from the running gateway at ${live})`));
   } else {
     const store = new Store(config.dataDir).init();
     const removed = store.clear({ simulatedOnly });
     await store.flush();
     console.log(green(`✔ Removed ${removed} ${simulatedOnly ? 'demo ' : ''}records.`));
+    console.log(
+      dim(`  (data dir: ${config.dataDir}, ${fmtInt(store.records.length)} records remain)`),
+    );
+    if (removed === 0 && store.records.length === 0) {
+      console.log(yellow('  ⚠ 0 records here - is a gateway running with a different --data-dir?'));
+      console.log(dim('    Target it directly with: npx ai-command-center clear --gateway <url>'));
+    }
   }
   if (simulatedOnly) console.log(dim('  (use --all to wipe real telemetry too)'));
 }
@@ -187,24 +204,34 @@ async function cmdStats() {
   const range = flags.range || '7d';
   let stats;
   let fx;
-  const live = await liveGateway(config);
+  let source;
+  let live = await liveGateway(config);
   if (live) {
-    const res = await fetch(`${live}/api/stats?range=${range}`);
-    if (!res.ok) throw new Error(`gateway error: HTTP ${res.status}`);
-    stats = await res.json();
-    fx = await fetch(`${live}/api/fx`)
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null);
-  } else {
+    try {
+      stats = await gwJson(live, `/api/stats?range=${encodeURIComponent(range)}`);
+      fx = await fetch(`${live}/api/fx`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      source = { mode: 'gateway', gateway: live };
+    } catch (err) {
+      // A locked gateway won't serve stats without a login. When we discovered
+      // it ourselves it serves this same data dir, so read the files directly;
+      // an explicit --gateway target has no local files to fall back to.
+      if (err.code !== 'gw-auth' || flags.gateway !== undefined) throw err;
+      live = null;
+    }
+  }
+  if (!live) {
     const store = new Store(config.dataDir).init();
     stats = computeStats(store.records, { range });
+    source = { mode: 'files', dataDir: config.dataDir, records: store.records.length };
   }
   fx ??= {
     ...new FxService(config.dataDir, config.currency).get(),
     default: config.currency.default,
   };
   if (flags.json) {
-    console.log(JSON.stringify({ ...stats, fx }, null, 2));
+    console.log(JSON.stringify({ ...stats, fx, source }, null, 2));
     return;
   }
   const code = fx.default || 'USD';
@@ -213,6 +240,13 @@ async function cmdStats() {
   const t = stats.totals;
   console.log('');
   console.log(`  ${bold(cyan('AI Command Center'))} ${dim(`- last ${range}`)}`);
+  console.log(
+    `  ${dim(
+      source.mode === 'gateway'
+        ? `source: live gateway at ${source.gateway}`
+        : `source: ${source.dataDir} (${fmtInt(source.records)} records on disk)`,
+    )}`,
+  );
   console.log('');
   const usdNote =
     code !== 'USD' ? dim(` (≈ ${fmtUsd(t.costUsd)}${fx.stale ? ', approx fx' : ''})`) : '';
@@ -235,10 +269,23 @@ async function cmdStats() {
     console.log('');
   }
   if (t.unpriced > 0) {
+    const models = (stats.unpricedModels || []).map((m) => m.model);
+    const shown = models.slice(0, 6).join(', ') + (models.length > 6 ? ', …' : '');
     console.log(
-      yellow(`  ⚠ ${t.unpriced} requests used models with no pricing entry (cost shown as 0).`),
+      yellow(
+        `  ⚠ ${t.unpriced} unpriced request${t.unpriced === 1 ? '' : 's'} (cost recorded as 0)` +
+          (shown ? ` - add pricing overrides for: ${shown}` : ''),
+      ),
     );
-    console.log(dim('    Add prices via the "pricing" key in your aicc config.\n'));
+    console.log(
+      dim('    e.g. "pricing": { "<model>": { "in": 1.0, "out": 4.0 } } in your aicc config.\n'),
+    );
+  }
+  if (source.mode === 'files' && source.records === 0) {
+    console.log(yellow('  ⚠ 0 records here - is a gateway running with a different --data-dir?'));
+    console.log(
+      dim('    Point stats at it directly: npx ai-command-center stats --gateway <url>\n'),
+    );
   }
 }
 
@@ -263,7 +310,10 @@ function cmdSnippets() {
       );
     }
   }
-  console.log(snippetsText(url, project, { bold, cyan, dim, seg, keyHeader }));
+  const custom = customProviders(buildProviderTable(config));
+  console.log(
+    snippetsText(url, project, { bold, cyan, dim, seg, keyHeader, customProviders: custom }),
+  );
 }
 
 async function cmdUser() {
@@ -305,6 +355,23 @@ async function cmdUser() {
 
 // -------------------------------------------------------------------- helpers
 async function liveGateway(config) {
+  // --gateway <url>: operate on that running instance's API, explicitly - no
+  // data-dir matching. The way to reach a gateway whose store lives elsewhere.
+  // Any presence of the flag is explicit: an empty value (--gateway= with an
+  // unset shell var) must fail fast, never silently operate on local files.
+  if (flags.gateway !== undefined) {
+    if (typeof flags.gateway !== 'string' || !flags.gateway.trim()) {
+      throw new Error('usage: --gateway <url>   (e.g. --gateway http://localhost:4321)');
+    }
+    const url = flags.gateway.trim().replace(/\/+$/, '');
+    const health = await fetch(`${url}/health`, { signal: AbortSignal.timeout(3000) })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (health?.name !== 'ai-command-center') {
+      throw new Error(`no AI Command Center gateway answered at ${url} (is it running?)`);
+    }
+    return url;
+  }
   const explicitAddr = flags.port != null || flags.host != null;
   // The discovery file lives inside the data dir a gateway actually serves, so a
   // hit there is guaranteed to be the gateway for THIS data dir.
@@ -324,6 +391,24 @@ async function liveGateway(config) {
   const url = `http://${displayHost(config.host)}:${config.port}`;
   if (await isOurGateway(url, config, false)) return url;
   return null;
+}
+
+/** Call a live gateway's API, turning auth failures into actionable errors. */
+async function gwJson(live, pathname, opts = {}) {
+  const res = await fetch(`${live}${pathname}`, opts);
+  const body = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403) {
+    const err = new Error(
+      `the gateway at ${live} has auth enabled and this needs ${res.status === 401 ? 'a login' : 'an admin login'}.\n` +
+        `  Use the dashboard (${live}), or stop the gateway and re-run this command to work on its files directly.`,
+    );
+    err.code = 'gw-auth';
+    throw err;
+  }
+  if (!res.ok) {
+    throw new Error(body?.error?.message || `gateway error: HTTP ${res.status}`);
+  }
+  return body;
 }
 
 async function isOurGateway(url, config, viaDiscovery) {
@@ -387,71 +472,6 @@ function fmtNum(v) {
   return String(v);
 }
 
-export function snippetsText(
-  url,
-  project,
-  { bold: b = (s) => s, cyan: cy = (s) => s, dim: d = (s) => s, seg, keyHeader = null } = {},
-) {
-  seg ||= `p/${encodeURIComponent(project)}`;
-  const base = `${url}/${seg}`;
-  const keyed = seg.startsWith('k/');
-  const trackAuth = keyHeader
-    ? ` \\\n    -H "x-aicc-key: ${keyHeader}"`
-    : keyed
-      ? ' \\\n    -H "x-aicc-key: <gateway-key>"'
-      : '';
-  return `
-${b('── Plug any project into AI Command Center ──────────────────────────')}
-
-${b('Zero-code (any language)')} ${d('- just point the SDK at the gateway via env vars:')}
-  ${cy(`export OPENAI_BASE_URL="${base}/openai/v1"`)}
-  ${cy(`export ANTHROPIC_BASE_URL="${base}/anthropic"`)}
-  ${d('Your provider API keys stay exactly where they are - the gateway passes them through.')}
-
-${b('Python (OpenAI SDK)')}
-  from openai import OpenAI
-  client = OpenAI(base_url="${base}/openai/v1")
-
-${b('Python (Anthropic SDK)')}
-  from anthropic import Anthropic
-  client = Anthropic(base_url="${base}/anthropic")
-
-${b('Python (google-genai)')}
-  from google import genai
-  client = genai.Client(http_options={"base_url": "${base}/gemini"})
-
-${b('JavaScript / TypeScript')}
-  import OpenAI from "openai";
-  const client = new OpenAI({ baseURL: "${base}/openai/v1" });
-
-${b('Java (openai-java)')}
-  OpenAIClient client = OpenAIOkHttpClient.builder()
-      .fromEnv().baseUrl("${base}/openai/v1").build();
-
-${b('LangChain (Python)')}
-  llm = ChatOpenAI(base_url="${base}/openai/v1")
-
-${b('curl')}
-  curl ${base}/openai/v1/chat/completions \\
-    -H "Authorization: Bearer $OPENAI_API_KEY" -H "Content-Type: application/json" \\
-    -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hi"}]}'
-
-${b('Anything else (batch jobs, unsupported providers)')} ${d('- report usage directly:')}
-  curl -X POST ${url}/api/track -H "Content-Type: application/json"${trackAuth} \\
-    -d '{"project":"${project}","provider":"openai","model":"gpt-4o-mini","tokensIn":1200,"tokensOut":300}'
-
-${
-  keyed
-    ? d('The gateway key in the URL both authenticates the call and assigns it to your project.')
-    : d(
-        `Replace "${project}" with your project name - that's how calls are grouped on the dashboard.`,
-      ) +
-      '\n' +
-      d('Alternative to path prefix: send header  x-aicc-project: ' + project)
-}
-`;
-}
-
 function printHelp() {
   console.log(`
 ${bold(cyan('AI Command Center'))} ${dim('v' + PKG.version)} - one gateway, every AI project, one dashboard.
@@ -472,6 +492,8 @@ ${bold('Options')}
   --port <n>        Gateway port (default 4321)
   --host <h>        Bind host (default 127.0.0.1; use 0.0.0.0 to share on LAN)
   --data-dir <dir>  Where telemetry is stored (default ~/.ai-command-center)
+  --gateway <url>   demo/clear/stats: operate on a running gateway's API instead
+                    of local files (works across machines and --data-dirs)
   --config <file>   Extra config file (JSON)
   --preset <name>   Load a built-in config preset (e.g. example)
   --project <name>  Project name used in snippets output

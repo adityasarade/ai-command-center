@@ -12,6 +12,32 @@ export default function Page() {
         database and no external services, so hosting it is deliberately boring.
       </p>
 
+      <h2>Know the failure mode: the gateway sits in the request path</h2>
+      <p>
+        This is a proxy, not a tap - it is <strong>not fail-open</strong>. If the gateway process is
+        down, your apps&apos; LLM calls fail at the connection: the SDK sees{' '}
+        <code>connection refused</code>, runs its own retries (most SDKs retry a handful of times
+        over a few seconds), and then surfaces an error to your app. Nothing queues, nothing
+        silently falls through to the provider.
+      </p>
+      <p>Two consequences for anything beyond local development:</p>
+      <ul>
+        <li>
+          <strong>Run it supervised</strong> - under systemd, Docker with a restart policy, or any
+          process manager, so a crash or reboot brings it straight back (examples below).
+        </li>
+        <li>
+          <strong>Keep a kill switch.</strong> Integration is just a base URL, so the fallback is
+          equally small: unset <code>OPENAI_BASE_URL</code> / <code>ANTHROPIC_BASE_URL</code> (or
+          whatever base URL you set) in the consuming app and restart it - calls go directly to the
+          provider again. You lose telemetry while it&apos;s off, not availability. Caveat: this
+          assumes apps carry their own provider keys (the default pass-through setup). If you rely
+          on centrally injected keys (config <code>keys</code> / <code>keyEnv</code>), the apps have
+          nothing to authenticate with when they bypass the gateway - keep provider keys available
+          to the apps if you want the kill switch to work.
+        </li>
+      </ul>
+
       <h2>Run it as a long-lived service</h2>
       <CodeBlock
         lang="bash"
@@ -42,21 +68,43 @@ User=aicc
 WantedBy=multi-user.target`}
       />
 
-      <h2>Docker</h2>
+      <h2>Docker / docker-compose (recommended)</h2>
+      <p>
+        Pin the npm version in the image so a container rebuild can&apos;t silently change gateway
+        behavior under your apps:
+      </p>
       <CodeBlock
         lang="dockerfile"
+        label="Dockerfile"
         code={`FROM node:22-alpine
-RUN npm install -g ai-command-center
+RUN npm install -g ai-command-center@0.2.1   # pin - upgrade deliberately
 VOLUME /data
 EXPOSE 4321
 ENV AICC_DATA_DIR=/data
-CMD ["aicc","start","--host","0.0.0.0"]`}
+CMD ["aicc","start","--host","0.0.0.0","--no-open"]`}
       />
+      <p>
+        The container binds <code>0.0.0.0</code> <em>inside</em> its own network namespace (so the
+        port mapping works), while the host port stays on <code>127.0.0.1</code> - the gateway is
+        reachable from the box, not the network. Drop the <code>127.0.0.1:</code> prefix only when
+        you intend to share it (and create the admin account first):
+      </p>
       <CodeBlock
-        lang="bash"
-        code={`docker build -t aicc .
-docker run -p 4321:4321 -v aicc-data:/data aicc`}
+        lang="yaml"
+        label="docker-compose.yml"
+        code={`services:
+  aicc:
+    build: .
+    restart: unless-stopped        # survives crashes and reboots
+    ports:
+      - "127.0.0.1:4321:4321"      # host-local only; remove the prefix to share
+    volumes:
+      - aicc-data:/data            # telemetry + auth survive image rebuilds
+
+volumes:
+  aicc-data:`}
       />
+      <CodeBlock lang="bash" code={`docker compose up -d --build`} />
 
       <h2>Behind a reverse proxy (recommended for anything shared)</h2>
       <p>

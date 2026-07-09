@@ -107,8 +107,18 @@ aicc --help`}
 npx ai-command-center --host 0.0.0.0     # share on your LAN
 npx ai-command-center --data-dir ./tel   # where telemetry is stored
 npx ai-command-center --preset example   # load a config preset
-npx ai-command-center --no-auth          # disable login + gateway keys`}
+npx ai-command-center --no-auth          # disable login + gateway keys
+npx ai-command-center stats --gateway http://gw-host:4321
+                          # demo/clear/stats: target a running gateway's
+                          # API instead of local files`}
       />
+
+      <p>
+        <code>stats</code> and <code>clear</code> always print which store they read (the data dir
+        and its record count, or the live gateway URL). Run them from a different machine or{' '}
+        <code>--data-dir</code> than the gateway and they show an empty store and point you at{' '}
+        <code>--gateway</code>.
+      </p>
 
       <p>
         Telemetry defaults to <code>~/.ai-command-center/</code> as append-only JSONL. Delete that

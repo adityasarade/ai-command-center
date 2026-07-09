@@ -3,10 +3,10 @@
 ## ✅ Shipped
 
 - **Gateway on npm**: [`ai-command-center`](https://www.npmjs.com/package/ai-command-center),
-  latest `0.2.0` (public, MIT, zero runtime deps). Install-free run:
+  latest `0.2.1` (public, MIT, zero runtime deps). Install-free run:
 
   ```bash
-  npx ai-command-center@latest --version   # 0.2.0
+  npx ai-command-center@latest --version   # 0.2.1
   ```
 
 - **Thin SDKs published**:
@@ -22,7 +22,8 @@
   - [`v0.1.0`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.1.0) - first public release.
   - [`v0.1.1`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.1.1) - dashboard search & pagination.
   - [`v0.2.0`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.2.0) - provider routing, roles & grants, live pricing.
-- **Verified**: 73 tests pass on Node 18/20/22, CI is green, evals pass.
+  - [`v0.2.1`](https://github.com/adityasarade/ai-command-center/releases/tag/v0.2.1) - custom-provider visibility, `--gateway` mode, unpriced-model surfacing, failure-mode docs.
+- **Verified**: 92 tests pass on Node 18/20/22, CI is green, evals pass.
 
 ## Cutting the next version
 

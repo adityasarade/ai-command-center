@@ -63,6 +63,7 @@ export function computeStats(allRecords, query = {}) {
   const byProject = new Map();
   const byModel = new Map();
   const byProvider = new Map();
+  const unpricedModels = new Map();
 
   for (const r of records) {
     const cost = r.costUsd || 0;
@@ -71,7 +72,11 @@ export function computeStats(allRecords, query = {}) {
     totals.tokensOut += r.tokensOut || 0;
     totals.cacheRead += r.cacheRead || 0;
     if (!r.ok) totals.errors += 1;
-    if (r.ok && r.priced === false) totals.unpriced += 1;
+    if (r.ok && r.priced === false) {
+      totals.unpriced += 1;
+      const key = `${r.provider || '(unknown)'}:${r.model || '(unknown)'}`;
+      unpricedModels.set(key, (unpricedModels.get(key) || 0) + 1);
+    }
     if (r.simulated) totals.simulated += 1;
     if (r.latencyMs != null && r.ok) latencies.push(r.latencyMs);
 
@@ -93,6 +98,11 @@ export function computeStats(allRecords, query = {}) {
     from,
     to,
     totals,
+    // Which models the unpriced counter refers to, so pricing overrides are
+    // actionable ("add pricing for sarvam:sarvam-m") instead of a bare count.
+    unpricedModels: [...unpricedModels.entries()]
+      .map(([model, requests]) => ({ model, requests }))
+      .sort((a, b) => b.requests - a.requests),
     timeseries: bucketize(records, from, to),
     byProject: finalize(byProject, 'project'),
     byModel: finalize(byModel, 'model').map((row) => {

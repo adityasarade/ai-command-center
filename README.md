@@ -12,7 +12,7 @@ rupee, and millisecond lands in one place.
 [![Node](https://img.shields.io/badge/node-%E2%89%A518.17-3fb950.svg)](package.json)
 [![runtime deps](https://img.shields.io/badge/runtime%20deps-0-21c17a.svg)](packages/gateway/package.json)
 [![npm](https://img.shields.io/npm/v/ai-command-center?color=cb3837&label=npm)](https://www.npmjs.com/package/ai-command-center)
-[![tests](https://img.shields.io/badge/tests-61%20passing-3fb950.svg)](packages/gateway/test)
+[![tests](https://img.shields.io/badge/tests-92%20passing-3fb950.svg)](packages/gateway/test)
 
 <br/>
 
@@ -160,16 +160,19 @@ npx ai-command-center user add   # manage accounts (first user = admin)
 ```
 
 Flags: `--port` · `--host 0.0.0.0` (share on a LAN) · `--data-dir` · `--config` ·
-`--preset <name>` · `--no-auth`.
+`--preset <name>` · `--no-auth` · `--gateway <url>` (point `stats`/`clear`/`demo`
+at a running gateway's API instead of local files - `stats` and `clear` always
+print which store they actually read, so a cwd/data-dir mismatch is visible).
 
 ## Configuration, auth, security
 
 Everything is optional and the defaults are sensible. The full reference lives in
 the docs:
 
-- **[Configuration](https://aicommandcenter.vercel.app/docs/config)** - layered config, presets, currency, custom providers, pricing overrides.
+- **[Configuration](https://aicommandcenter.vercel.app/docs/config)** - layered config, presets, currency, custom providers, pricing overrides. Note: custom-provider models are usually missing from the public price sheet - pair them with a `pricing` block or their requests record unpriced (`stats` names the models to add).
 - **[Auth & teams](https://aicommandcenter.vercel.app/docs/auth)** - open until you create the first admin, then login plus per-project gateway keys and team-scoped visibility.
 - **[Security](https://aicommandcenter.vercel.app/docs/security)** - keys pass through and are never logged, no message bodies are stored, and cross-origin protection keeps a random web page from spending your keys or wiping telemetry.
+- **[Self-hosting](https://aicommandcenter.vercel.app/docs/self-hosting)** - the gateway sits in the request path and is **not fail-open**: if it's down, LLM calls fail at the client after the SDK's own retries. For anything beyond local dev, run it supervised (systemd / docker-compose examples with a pinned version, `restart: unless-stopped`, and the data dir on a volume) and keep the kill switch in mind - unset the base URL in the consuming app and it calls providers directly again (assuming the app has its own provider keys, i.e. you are not relying on centrally injected `keys`).
 
 ## Benchmarks
 
@@ -211,7 +214,7 @@ docs/                comparison, demo script
 ## Development
 
 ```bash
-npm test          # 72 tests - mock upstream providers, no API keys needed
+npm test          # 92 tests - mock upstream providers, no API keys needed
 npm run evals     # overhead + cost-accuracy report
 npm start         # run the gateway from source
 cd site && npm run dev   # the website

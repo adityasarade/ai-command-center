@@ -42,7 +42,9 @@ export default function Page() {
   // (and never for untrusted cross-origin requests). Callers' own keys win.
   "keys": { "openai": "sk-...", "anthropic": "sk-ant-..." },
 
-  // Custom OpenAI-compatible providers (Azure OpenAI, vLLM, internal gateways…)
+  // Custom OpenAI-compatible providers (Azure OpenAI, vLLM, internal gateways…).
+  // Their models are usually missing from the public price sheet - add a
+  // "pricing" entry per model or requests record unpriced (cost 0). See docs/providers.
   "providers": {
     "azure": { "upstream": "https://x.openai.azure.com", "kind": "openai", "authHeader": "api-key" }
   },
